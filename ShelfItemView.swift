@@ -1,12 +1,12 @@
 import AppKit
 
-class ShelfItemView: NSView {
+// MARK: - Base class for shared drag, hover, and selection behavior
+
+class BaseShelfItemView: NSView, NSDraggingSource {
 
     let item: ShelfItem
-    private let removeButton = NSButton()
-    private let ungroupButton = NSButton()
-    private var trackingArea: NSTrackingArea?
-    private let backgroundLayer = CALayer()
+    let removeButton = NSButton()
+    let ungroupButton = NSButton()
 
     var onRemove: (() -> Void)?
     var onUngroup: (() -> Void)?
@@ -14,17 +14,151 @@ class ShelfItemView: NSView {
     var onMouseDown: ((_ command: Bool, _ shift: Bool) -> Void)?
     var onMouseUp: ((_ wasDragged: Bool, _ command: Bool, _ shift: Bool) -> Void)?
     var draggedItems: (() -> [ShelfItem])?
-    private var didDrag = false
-    private var mouseDownModifiers: NSEvent.ModifierFlags = []
 
     var isSelected: Bool = false {
-        didSet { updateBackgroundColor() }
+        didSet { updateSelectionVisual() }
     }
+
+    private var trackingArea: NSTrackingArea?
+    private var didDrag = false
+    private var mouseDownModifiers: NSEvent.ModifierFlags = []
 
     init(item: ShelfItem) {
         self.item = item
         super.init(frame: .zero)
         wantsLayer = true
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    // Subclasses override to update their selection layer/background
+    func updateSelectionVisual() {}
+
+    // Subclasses override to show/hide hover-specific visuals
+    func mouseEnteredExtra() {}
+    func mouseExitedExtra() {}
+
+    // MARK: - Shared button setup
+
+    func setupRemoveButton(symbolConfig: NSImage.SymbolConfiguration, symbolName: String = "xmark") {
+        removeButton.bezelStyle = .accessoryBarAction
+        removeButton.imagePosition = .imageOnly
+        removeButton.isBordered = false
+        removeButton.contentTintColor = .tertiaryLabelColor
+        removeButton.target = self
+        removeButton.action = #selector(removeTapped)
+        removeButton.translatesAutoresizingMaskIntoConstraints = false
+        removeButton.isHidden = true
+        removeButton.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "Remove")?.withSymbolConfiguration(symbolConfig)
+    }
+
+    func setupUngroupButton(symbolConfig: NSImage.SymbolConfiguration) {
+        ungroupButton.bezelStyle = .accessoryBarAction
+        ungroupButton.imagePosition = .imageOnly
+        ungroupButton.isBordered = false
+        ungroupButton.contentTintColor = .tertiaryLabelColor
+        ungroupButton.target = self
+        ungroupButton.action = #selector(ungroupTapped)
+        ungroupButton.translatesAutoresizingMaskIntoConstraints = false
+        ungroupButton.isHidden = true
+        ungroupButton.image = NSImage(systemSymbolName: "rectangle.3.group", accessibilityDescription: "Ungroup")?.withSymbolConfiguration(symbolConfig)
+    }
+
+    // MARK: - Hover tracking
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let existing = trackingArea { removeTrackingArea(existing) }
+        trackingArea = NSTrackingArea(
+            rect: bounds,
+            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+            owner: self
+        )
+        addTrackingArea(trackingArea!)
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        removeButton.isHidden = false
+        if item.isGroup { ungroupButton.isHidden = false }
+        mouseEnteredExtra()
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        removeButton.isHidden = true
+        ungroupButton.isHidden = true
+        mouseExitedExtra()
+    }
+
+    // MARK: - Click & Drag
+
+    override func mouseDown(with event: NSEvent) {
+        didDrag = false
+        mouseDownModifiers = event.modifierFlags
+        onMouseDown?(event.modifierFlags.contains(.command), event.modifierFlags.contains(.shift))
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard !didDrag else { return }
+        didDrag = true
+
+        let itemsToDrag = draggedItems?() ?? [item]
+        var draggingItems: [NSDraggingItem] = []
+
+        for dragItem in itemsToDrag {
+            for url in dragItem.urls {
+                let pbItem = NSPasteboardItem()
+                pbItem.setString(url.absoluteString, forType: .fileURL)
+                let draggingItem = NSDraggingItem(pasteboardWriter: pbItem)
+                draggingItem.setDraggingFrame(bounds, contents: dragItem.thumbnail)
+                draggingItems.append(draggingItem)
+            }
+        }
+
+        beginDraggingSession(with: draggingItems, event: event, source: self)
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        onMouseUp?(didDrag, mouseDownModifiers.contains(.command), mouseDownModifiers.contains(.shift))
+    }
+
+    // MARK: - NSDraggingSource
+
+    func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
+        switch context {
+        case .outsideApplication: return [.copy, .move]
+        case .withinApplication: return []
+        @unknown default: return []
+        }
+    }
+
+    func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
+        NotificationCenter.default.post(name: DragDetector.resyncNotification, object: nil)
+        let droppedInShelf = window?.frame.contains(screenPoint) == true
+        if operation != [] && !droppedInShelf { onDragCompleted?() }
+    }
+
+    // MARK: - Actions
+
+    @objc private func removeTapped() {
+        onRemove?()
+    }
+
+    @objc private func ungroupTapped() {
+        onUngroup?()
+    }
+}
+
+// MARK: - ShelfItemView (list layout)
+
+class ShelfItemView: BaseShelfItemView {
+
+    private let backgroundLayer = CALayer()
+    private let iconView = NSImageView()
+
+    override init(item: ShelfItem) {
+        super.init(item: item)
         setupBackground()
         setupViews()
     }
@@ -45,8 +179,6 @@ class ShelfItemView: NSView {
         backgroundLayer.frame = bounds
     }
 
-    private let iconView = NSImageView()
-
     private func setupViews() {
         iconView.image = item.isGroup ? item.icon : item.thumbnail
         iconView.imageScaling = .scaleProportionallyUpOrDown
@@ -64,33 +196,14 @@ class ShelfItemView: NSView {
         label.translatesAutoresizingMaskIntoConstraints = false
 
         let symbolConfig = NSImage.SymbolConfiguration(pointSize: 9, weight: .semibold)
-
-        removeButton.bezelStyle = .accessoryBarAction
-        removeButton.imagePosition = .imageOnly
-        removeButton.isBordered = false
-        removeButton.contentTintColor = .tertiaryLabelColor
-        removeButton.target = self
-        removeButton.action = #selector(removeTapped)
-        removeButton.translatesAutoresizingMaskIntoConstraints = false
-        removeButton.isHidden = true
-        removeButton.image = NSImage(systemSymbolName: "xmark", accessibilityDescription: "Remove")?.withSymbolConfiguration(symbolConfig)
-
-        ungroupButton.bezelStyle = .accessoryBarAction
-        ungroupButton.imagePosition = .imageOnly
-        ungroupButton.isBordered = false
-        ungroupButton.contentTintColor = .tertiaryLabelColor
-        ungroupButton.target = self
-        ungroupButton.action = #selector(ungroupTapped)
-        ungroupButton.translatesAutoresizingMaskIntoConstraints = false
-        ungroupButton.isHidden = true
-        ungroupButton.image = NSImage(systemSymbolName: "rectangle.3.group", accessibilityDescription: "Ungroup")?.withSymbolConfiguration(symbolConfig)
+        setupRemoveButton(symbolConfig: symbolConfig)
+        setupUngroupButton(symbolConfig: symbolConfig)
 
         addSubview(iconView)
         addSubview(label)
         addSubview(ungroupButton)
         addSubview(removeButton)
 
-        // Ungroup button sits left of remove button, only visible for groups
         let trailingAnchorView = item.isGroup ? ungroupButton : removeButton
 
         NSLayoutConstraint.activate([
@@ -117,7 +230,7 @@ class ShelfItemView: NSView {
         ])
     }
 
-    private func updateBackgroundColor() {
+    override func updateSelectionVisual() {
         if isSelected {
             backgroundLayer.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.3).cgColor
         } else {
@@ -125,104 +238,25 @@ class ShelfItemView: NSView {
         }
     }
 
-    // MARK: - Hover tracking
-
-    override func updateTrackingAreas() {
-        super.updateTrackingAreas()
-        if let existing = trackingArea { removeTrackingArea(existing) }
-        trackingArea = NSTrackingArea(
-            rect: bounds,
-            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
-            owner: self
-        )
-        addTrackingArea(trackingArea!)
-    }
-
-    override func mouseEntered(with event: NSEvent) {
-        removeButton.isHidden = false
-        if item.isGroup { ungroupButton.isHidden = false }
+    override func mouseEnteredExtra() {
         if !isSelected {
             backgroundLayer.backgroundColor = NSColor.white.withAlphaComponent(0.12).cgColor
         }
     }
 
-    override func mouseExited(with event: NSEvent) {
-        removeButton.isHidden = true
-        ungroupButton.isHidden = true
-        updateBackgroundColor()
-    }
-
-    // MARK: - Click & Drag
-
-    override func mouseDown(with event: NSEvent) {
-        didDrag = false
-        mouseDownModifiers = event.modifierFlags
-        onMouseDown?(event.modifierFlags.contains(.command), event.modifierFlags.contains(.shift))
-    }
-
-    override func mouseDragged(with event: NSEvent) {
-        guard !didDrag else { return }
-        didDrag = true
-
-        let itemsToDrag = draggedItems?() ?? [item]
-        var draggingItems: [NSDraggingItem] = []
-
-        for dragItem in itemsToDrag {
-            // For groups, create one NSDraggingItem per URL
-            for url in dragItem.urls {
-                let pbItem = NSPasteboardItem()
-                pbItem.setString(url.absoluteString, forType: .fileURL)
-                let draggingItem = NSDraggingItem(pasteboardWriter: pbItem)
-                draggingItem.setDraggingFrame(bounds, contents: dragItem.thumbnail)
-                draggingItems.append(draggingItem)
-            }
-        }
-
-        beginDraggingSession(with: draggingItems, event: event, source: self)
-    }
-
-    override func mouseUp(with event: NSEvent) {
-        onMouseUp?(didDrag, mouseDownModifiers.contains(.command), mouseDownModifiers.contains(.shift))
-    }
-
-    // MARK: - Actions
-
-    @objc private func removeTapped() {
-        onRemove?()
-    }
-
-    @objc private func ungroupTapped() {
-        onUngroup?()
+    override func mouseExitedExtra() {
+        updateSelectionVisual()
     }
 }
 
-// MARK: - ShelfGridItemView
+// MARK: - ShelfGridItemView (grid layout)
 
-class ShelfGridItemView: NSView {
+class ShelfGridItemView: BaseShelfItemView {
 
-    let item: ShelfItem
-    private let removeButton = NSButton()
-    private let ungroupButton = NSButton()
-    private var trackingArea: NSTrackingArea?
     private let selectionLayer = CALayer()
 
-    var onRemove: (() -> Void)?
-    var onUngroup: (() -> Void)?
-    var onDragCompleted: (() -> Void)?
-    var onMouseDown: ((_ command: Bool, _ shift: Bool) -> Void)?
-    var onMouseUp: ((_ wasDragged: Bool, _ command: Bool, _ shift: Bool) -> Void)?
-    var draggedItems: (() -> [ShelfItem])?
-    private var didDrag = false
-    private var mouseDownModifiers: NSEvent.ModifierFlags = []
-
-    var isSelected: Bool = false {
-        didSet { updateSelectionVisual() }
-    }
-
-    init(item: ShelfItem) {
-        self.item = item
-        super.init(frame: .zero)
-        wantsLayer = true
+    override init(item: ShelfItem) {
+        super.init(item: item)
         setupSelectionLayer()
         setupViews()
     }
@@ -243,7 +277,7 @@ class ShelfGridItemView: NSView {
         selectionLayer.frame = bounds
     }
 
-    private func updateSelectionVisual() {
+    override func updateSelectionVisual() {
         if isSelected {
             selectionLayer.borderWidth = 2
             selectionLayer.borderColor = NSColor.controlAccentColor.withAlphaComponent(0.6).cgColor
@@ -255,7 +289,7 @@ class ShelfGridItemView: NSView {
     }
 
     private func setupViews() {
-        let imageView = NSImageView(image: item.thumbnail)  // Groups already have composite thumbnail
+        let imageView = NSImageView(image: item.thumbnail)
         imageView.imageScaling = .scaleProportionallyUpOrDown
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.wantsLayer = true
@@ -274,26 +308,8 @@ class ShelfGridItemView: NSView {
         label.translatesAutoresizingMaskIntoConstraints = false
 
         let symbolConfig = NSImage.SymbolConfiguration(pointSize: 9, weight: .bold)
-
-        removeButton.bezelStyle = .accessoryBarAction
-        removeButton.imagePosition = .imageOnly
-        removeButton.isBordered = false
-        removeButton.contentTintColor = .tertiaryLabelColor
-        removeButton.target = self
-        removeButton.action = #selector(removeTapped)
-        removeButton.translatesAutoresizingMaskIntoConstraints = false
-        removeButton.isHidden = true
-        removeButton.image = NSImage(systemSymbolName: "xmark.circle.fill", accessibilityDescription: "Remove")?.withSymbolConfiguration(symbolConfig)
-
-        ungroupButton.bezelStyle = .accessoryBarAction
-        ungroupButton.imagePosition = .imageOnly
-        ungroupButton.isBordered = false
-        ungroupButton.contentTintColor = .tertiaryLabelColor
-        ungroupButton.target = self
-        ungroupButton.action = #selector(ungroupTapped)
-        ungroupButton.translatesAutoresizingMaskIntoConstraints = false
-        ungroupButton.isHidden = true
-        ungroupButton.image = NSImage(systemSymbolName: "rectangle.3.group", accessibilityDescription: "Ungroup")?.withSymbolConfiguration(symbolConfig)
+        setupRemoveButton(symbolConfig: symbolConfig, symbolName: "xmark.circle.fill")
+        setupUngroupButton(symbolConfig: symbolConfig)
 
         addSubview(imageView)
         addSubview(label)
@@ -323,114 +339,11 @@ class ShelfGridItemView: NSView {
         ])
     }
 
-    // MARK: - Hover tracking
-
-    override func updateTrackingAreas() {
-        super.updateTrackingAreas()
-        if let existing = trackingArea { removeTrackingArea(existing) }
-        trackingArea = NSTrackingArea(
-            rect: bounds,
-            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
-            owner: self
-        )
-        addTrackingArea(trackingArea!)
-    }
-
-    override func mouseEntered(with event: NSEvent) {
-        removeButton.isHidden = false
-        if item.isGroup { ungroupButton.isHidden = false }
-    }
-
-    override func mouseExited(with event: NSEvent) {
-        removeButton.isHidden = true
-        ungroupButton.isHidden = true
-    }
-
-    // MARK: - Click & Drag
-
-    override func mouseDown(with event: NSEvent) {
-        didDrag = false
-        mouseDownModifiers = event.modifierFlags
-        onMouseDown?(event.modifierFlags.contains(.command), event.modifierFlags.contains(.shift))
-    }
-
-    override func mouseDragged(with event: NSEvent) {
-        guard !didDrag else { return }
-        didDrag = true
-
-        let itemsToDrag = draggedItems?() ?? [item]
-        var draggingItems: [NSDraggingItem] = []
-
-        for dragItem in itemsToDrag {
-            for url in dragItem.urls {
-                let pbItem = NSPasteboardItem()
-                pbItem.setString(url.absoluteString, forType: .fileURL)
-                let draggingItem = NSDraggingItem(pasteboardWriter: pbItem)
-                draggingItem.setDraggingFrame(bounds, contents: dragItem.thumbnail)
-                draggingItems.append(draggingItem)
-            }
-        }
-
-        beginDraggingSession(with: draggingItems, event: event, source: self)
-    }
-
-    override func mouseUp(with event: NSEvent) {
-        onMouseUp?(didDrag, mouseDownModifiers.contains(.command), mouseDownModifiers.contains(.shift))
-    }
-
-    @objc private func removeTapped() {
-        onRemove?()
-    }
-
-    @objc private func ungroupTapped() {
-        onUngroup?()
-    }
-
     private static func truncateMiddle(_ string: String, maxLength: Int) -> String {
         guard string.count > maxLength else { return string }
         let half = (maxLength - 3) / 2
         let start = string.prefix(half)
         let end = string.suffix(half)
         return "\(start)...\(end)"
-    }
-}
-
-// MARK: - NSDraggingSource (ShelfGridItemView)
-
-extension ShelfGridItemView: NSDraggingSource {
-
-    func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
-        switch context {
-        case .outsideApplication: return [.copy, .move]
-        case .withinApplication: return []
-        @unknown default: return []
-        }
-    }
-
-    func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
-        NotificationCenter.default.post(name: DragDetector.resyncNotification, object: nil)
-        let droppedInShelf = window?.frame.contains(screenPoint) == true
-        if operation != [] && !droppedInShelf { onDragCompleted?() }
-    }
-}
-
-// MARK: - NSDraggingSource (ShelfItemView)
-
-extension ShelfItemView: NSDraggingSource {
-
-    func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
-        switch context {
-        case .outsideApplication: return [.copy, .move]
-        case .withinApplication: return []
-        @unknown default: return []
-        }
-    }
-
-    func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
-        NotificationCenter.default.post(name: DragDetector.resyncNotification, object: nil)
-        let droppedInShelf = window?.frame.contains(screenPoint) == true
-        if operation != [] && !droppedInShelf {
-            onDragCompleted?()
-        }
     }
 }

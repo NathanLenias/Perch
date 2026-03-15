@@ -62,7 +62,6 @@ class ShelfViewController: NSViewController {
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
 
         closeButton.bezelStyle = .accessoryBarAction
-        closeButton.image = NSImage(systemSymbolName: "xmark", accessibilityDescription: "Hide shelf")
         closeButton.imagePosition = .imageOnly
         closeButton.isBordered = false
         closeButton.target = self
