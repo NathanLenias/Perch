@@ -64,3 +64,5 @@ fastlane/test_output
 CLAUDE.md
 memory/
 prompt.md
+round_icon.swift
+.DS_Store

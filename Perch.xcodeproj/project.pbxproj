@@ -14,6 +14,7 @@
 		A1000005 /* ShelfItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000006 /* ShelfItem.swift */; };
 		A1000006 /* ShelfItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000007 /* ShelfItemView.swift */; };
 		A1000007 /* DragDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000008 /* DragDetector.swift */; };
+		A1000008 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B1000009 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -25,6 +26,7 @@
 		B1000006 /* ShelfItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShelfItem.swift; sourceTree = "<group>"; };
 		B1000007 /* ShelfItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShelfItemView.swift; sourceTree = "<group>"; };
 		B1000008 /* DragDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragDetector.swift; sourceTree = "<group>"; };
+		B1000009 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Perch/Assets.xcassets"; sourceTree = "<group>"; };
 		B1000010 /* Perch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Perch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -47,6 +49,7 @@
 				B1000006 /* ShelfItem.swift */,
 				B1000007 /* ShelfItemView.swift */,
 				B1000008 /* DragDetector.swift */,
+				B1000009 /* Assets.xcassets */,
 				B1000003 /* Info.plist */,
 			);
 			path = "";
@@ -69,6 +72,7 @@
 			buildPhases = (
 				D1000002 /* Sources */,
 				D1000003 /* Frameworks */,
+				D1000004 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -133,6 +137,17 @@
 		};
 /* End PBXFrameworksBuildPhase section */
 
+/* Begin PBXResourcesBuildPhase section */
+		D1000004 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000008 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin XCBuildConfiguration section */
 		F1000001 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -170,6 +185,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
 				INFOPLIST_FILE = Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -186,6 +202,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
 				INFOPLIST_FILE = Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (

@@ -5,6 +5,7 @@ class ShelfViewController: NSViewController {
     private let scrollView = NSScrollView()
     private let stackView = NSStackView()
     private let emptyLabel = NSTextField(labelWithString: "Drop files here")
+    private let emptyImageView = NSImageView()
     private let closeButton = NSButton()
     private let toolbar = NSStackView()
     private let toolbarSeparator = NSBox()
@@ -172,15 +173,25 @@ class ShelfViewController: NSViewController {
     }
 
     private func setupEmptyState() {
+        emptyImageView.image = NSImage(named: "BirdPerch")
+        emptyImageView.imageScaling = .scaleProportionallyUpOrDown
+        emptyImageView.translatesAutoresizingMaskIntoConstraints = false
+
         emptyLabel.font = .systemFont(ofSize: 12)
         emptyLabel.textColor = .tertiaryLabelColor
         emptyLabel.alignment = .center
         emptyLabel.translatesAutoresizingMaskIntoConstraints = false
 
+        contentView.addSubview(emptyImageView)
         contentView.addSubview(emptyLabel)
         NSLayoutConstraint.activate([
+            emptyImageView.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            emptyImageView.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: 16),
+            emptyImageView.widthAnchor.constraint(equalToConstant: 120),
+            emptyImageView.heightAnchor.constraint(equalToConstant: 120),
+
             emptyLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            emptyLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor, constant: 10),
+            emptyLabel.topAnchor.constraint(equalTo: emptyImageView.bottomAnchor, constant: 8),
         ])
     }
 
@@ -353,9 +364,11 @@ class ShelfViewController: NSViewController {
     }
 
     private func updateEmptyState() {
-        emptyLabel.isHidden = !items.isEmpty
-        toolbar.isHidden = items.isEmpty
-        toolbarSeparator.isHidden = items.isEmpty
+        let empty = items.isEmpty
+        emptyImageView.isHidden = !empty
+        emptyLabel.isHidden = !empty
+        toolbar.isHidden = empty
+        toolbarSeparator.isHidden = empty
     }
 }
 
