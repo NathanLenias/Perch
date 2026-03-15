@@ -9,6 +9,7 @@ class ShelfViewController: NSViewController {
     private let toolbar = NSStackView()
     private let toolbarSeparator = NSBox()
     private var items: [ShelfItem] = []
+    private var selectedURLs: Set<URL> = []
     private var contentView: NSView!
     private var viewMode: ViewMode = .grid
 
@@ -204,9 +205,72 @@ class ShelfViewController: NSViewController {
 
     func removeItem(_ item: ShelfItem) {
         items.removeAll { $0.url == item.url }
+        selectedURLs.remove(item.url)
         rebuildItemViews()
         updateEmptyState()
         if items.isEmpty { onBecameEmpty?() }
+    }
+
+    private func removeSelectedItems() {
+        let toRemove = selectedURLs
+        items.removeAll { toRemove.contains($0.url) }
+        selectedURLs.removeAll()
+        rebuildItemViews()
+        updateEmptyState()
+        if items.isEmpty { onBecameEmpty?() }
+    }
+
+    private var lastClickedIndex: Int?
+
+    private func handleMouseDown(_ item: ShelfItem, command: Bool, shift: Bool) {
+        let index = items.firstIndex(where: { $0.url == item.url })
+
+        if command {
+            // Cmd+click: toggle this item
+            if selectedURLs.contains(item.url) {
+                selectedURLs.remove(item.url)
+            } else {
+                selectedURLs.insert(item.url)
+            }
+            lastClickedIndex = index
+        } else if shift, let anchor = lastClickedIndex, let current = index {
+            // Shift+click: range select from anchor to here
+            let range = min(anchor, current)...max(anchor, current)
+            for i in range {
+                selectedURLs.insert(items[i].url)
+            }
+        } else if selectedURLs.contains(item.url) {
+            // Already selected, no modifier → don't change (allow drag)
+            // Deselection happens in mouseUp if no drag
+            lastClickedIndex = index
+        } else {
+            // Not selected, no modifier → select only this
+            selectedURLs = [item.url]
+            lastClickedIndex = index
+        }
+        updateSelectionVisuals()
+    }
+
+    private func handleMouseUp(_ item: ShelfItem, wasDragged: Bool, command: Bool, shift: Bool) {
+        // If simple click on already-selected item without drag → select only this one
+        if !wasDragged && !command && !shift && selectedURLs.contains(item.url) && selectedURLs.count > 1 {
+            selectedURLs = [item.url]
+            updateSelectionVisuals()
+        }
+    }
+
+    private func selectedItems() -> [ShelfItem] {
+        items.filter { selectedURLs.contains($0.url) }
+    }
+
+    private func updateSelectionVisuals() {
+        for view in stackView.arrangedSubviews {
+            if let listView = view as? ShelfItemView {
+                listView.isSelected = selectedURLs.contains(listView.item.url)
+            } else if let gridView = view as? ShelfGridItemView {
+                gridView.isSelected = selectedURLs.contains(gridView.item.url)
+            }
+        }
     }
 
     @objc private func hideShelf() {
@@ -248,8 +312,12 @@ class ShelfViewController: NSViewController {
             for item in items {
                 let itemView = ShelfItemView(item: item)
                 itemView.translatesAutoresizingMaskIntoConstraints = false
+                itemView.isSelected = selectedURLs.contains(item.url)
                 itemView.onRemove = { [weak self] in self?.removeItem(item) }
-                itemView.onDragCompleted = { [weak self] in self?.removeItem(item) }
+                itemView.onDragCompleted = { [weak self] in self?.removeSelectedItems() }
+                itemView.onMouseDown = { [weak self] cmd, shift in self?.handleMouseDown(item, command: cmd, shift: shift) }
+                itemView.onMouseUp = { [weak self] dragged, cmd, shift in self?.handleMouseUp(item, wasDragged: dragged, command: cmd, shift: shift) }
+                itemView.draggedItems = { [weak self] in self?.selectedItems() ?? [item] }
                 stackView.addArrangedSubview(itemView)
                 itemView.widthAnchor.constraint(equalTo: stackView.widthAnchor, constant: -16).isActive = true
             }
@@ -260,8 +328,12 @@ class ShelfViewController: NSViewController {
             for item in items {
                 let gridView = ShelfGridItemView(item: item)
                 gridView.translatesAutoresizingMaskIntoConstraints = false
+                gridView.isSelected = selectedURLs.contains(item.url)
                 gridView.onRemove = { [weak self] in self?.removeItem(item) }
-                gridView.onDragCompleted = { [weak self] in self?.removeItem(item) }
+                gridView.onDragCompleted = { [weak self] in self?.removeSelectedItems() }
+                gridView.onMouseDown = { [weak self] cmd, shift in self?.handleMouseDown(item, command: cmd, shift: shift) }
+                gridView.onMouseUp = { [weak self] dragged, cmd, shift in self?.handleMouseUp(item, wasDragged: dragged, command: cmd, shift: shift) }
+                gridView.draggedItems = { [weak self] in self?.selectedItems() ?? [item] }
                 stackView.addArrangedSubview(gridView)
                 gridView.widthAnchor.constraint(equalTo: stackView.widthAnchor, constant: -16).isActive = true
             }

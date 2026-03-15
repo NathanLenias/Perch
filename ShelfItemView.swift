@@ -9,6 +9,15 @@ class ShelfItemView: NSView {
 
     var onRemove: (() -> Void)?
     var onDragCompleted: (() -> Void)?
+    var onMouseDown: ((_ command: Bool, _ shift: Bool) -> Void)?
+    var onMouseUp: ((_ wasDragged: Bool, _ command: Bool, _ shift: Bool) -> Void)?
+    var draggedItems: (() -> [ShelfItem])?
+    private var didDrag = false
+    private var mouseDownModifiers: NSEvent.ModifierFlags = []
+
+    var isSelected: Bool = false {
+        didSet { updateBackgroundColor() }
+    }
 
     init(item: ShelfItem) {
         self.item = item
@@ -86,6 +95,14 @@ class ShelfItemView: NSView {
         ])
     }
 
+    private func updateBackgroundColor() {
+        if isSelected {
+            backgroundLayer.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.3).cgColor
+        } else {
+            backgroundLayer.backgroundColor = NSColor.white.withAlphaComponent(0.06).cgColor
+        }
+    }
+
     // MARK: - Hover tracking
 
     override func updateTrackingAreas() {
@@ -101,30 +118,44 @@ class ShelfItemView: NSView {
 
     override func mouseEntered(with event: NSEvent) {
         removeButton.isHidden = false
-        NSAnimationContext.runAnimationGroup { ctx in
-            ctx.duration = 0.15
+        if !isSelected {
             backgroundLayer.backgroundColor = NSColor.white.withAlphaComponent(0.12).cgColor
         }
     }
 
     override func mouseExited(with event: NSEvent) {
         removeButton.isHidden = true
-        NSAnimationContext.runAnimationGroup { ctx in
-            ctx.duration = 0.15
-            backgroundLayer.backgroundColor = NSColor.white.withAlphaComponent(0.06).cgColor
-        }
+        updateBackgroundColor()
     }
 
-    // MARK: - Drag Source
+    // MARK: - Click & Drag
+
+    override func mouseDown(with event: NSEvent) {
+        didDrag = false
+        mouseDownModifiers = event.modifierFlags
+        onMouseDown?(event.modifierFlags.contains(.command), event.modifierFlags.contains(.shift))
+    }
 
     override func mouseDragged(with event: NSEvent) {
-        let pasteboardItem = NSPasteboardItem()
-        pasteboardItem.setString(item.url.absoluteString, forType: .fileURL)
+        guard !didDrag else { return }
+        didDrag = true
 
-        let draggingItem = NSDraggingItem(pasteboardWriter: pasteboardItem)
-        draggingItem.setDraggingFrame(bounds, contents: item.thumbnail)
+        let itemsToDrag = draggedItems?() ?? [item]
+        var draggingItems: [NSDraggingItem] = []
 
-        beginDraggingSession(with: [draggingItem], event: event, source: self)
+        for dragItem in itemsToDrag {
+            let pbItem = NSPasteboardItem()
+            pbItem.setString(dragItem.url.absoluteString, forType: .fileURL)
+            let draggingItem = NSDraggingItem(pasteboardWriter: pbItem)
+            draggingItem.setDraggingFrame(bounds, contents: dragItem.thumbnail)
+            draggingItems.append(draggingItem)
+        }
+
+        beginDraggingSession(with: draggingItems, event: event, source: self)
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        onMouseUp?(didDrag, mouseDownModifiers.contains(.command), mouseDownModifiers.contains(.shift))
     }
 
     // MARK: - Actions
@@ -141,19 +172,53 @@ class ShelfGridItemView: NSView {
     let item: ShelfItem
     private let removeButton = NSButton()
     private var trackingArea: NSTrackingArea?
+    private let selectionLayer = CALayer()
 
     var onRemove: (() -> Void)?
     var onDragCompleted: (() -> Void)?
+    var onMouseDown: ((_ command: Bool, _ shift: Bool) -> Void)?
+    var onMouseUp: ((_ wasDragged: Bool, _ command: Bool, _ shift: Bool) -> Void)?
+    var draggedItems: (() -> [ShelfItem])?
+    private var didDrag = false
+    private var mouseDownModifiers: NSEvent.ModifierFlags = []
+
+    var isSelected: Bool = false {
+        didSet { updateSelectionVisual() }
+    }
 
     init(item: ShelfItem) {
         self.item = item
         super.init(frame: .zero)
         wantsLayer = true
+        setupSelectionLayer()
         setupViews()
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    private func setupSelectionLayer() {
+        selectionLayer.cornerRadius = 8
+        selectionLayer.cornerCurve = .continuous
+        selectionLayer.borderWidth = 0
+        layer?.addSublayer(selectionLayer)
+    }
+
+    override func layout() {
+        super.layout()
+        selectionLayer.frame = bounds
+    }
+
+    private func updateSelectionVisual() {
+        if isSelected {
+            selectionLayer.borderWidth = 2
+            selectionLayer.borderColor = NSColor.controlAccentColor.withAlphaComponent(0.6).cgColor
+            selectionLayer.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.1).cgColor
+        } else {
+            selectionLayer.borderWidth = 0
+            selectionLayer.backgroundColor = nil
+        }
     }
 
     private func setupViews() {
@@ -229,16 +294,34 @@ class ShelfGridItemView: NSView {
         removeButton.isHidden = true
     }
 
-    // MARK: - Drag Source
+    // MARK: - Click & Drag
+
+    override func mouseDown(with event: NSEvent) {
+        didDrag = false
+        mouseDownModifiers = event.modifierFlags
+        onMouseDown?(event.modifierFlags.contains(.command), event.modifierFlags.contains(.shift))
+    }
 
     override func mouseDragged(with event: NSEvent) {
-        let pasteboardItem = NSPasteboardItem()
-        pasteboardItem.setString(item.url.absoluteString, forType: .fileURL)
+        guard !didDrag else { return }
+        didDrag = true
 
-        let draggingItem = NSDraggingItem(pasteboardWriter: pasteboardItem)
-        draggingItem.setDraggingFrame(bounds, contents: item.thumbnail)
+        let itemsToDrag = draggedItems?() ?? [item]
+        var draggingItems: [NSDraggingItem] = []
 
-        beginDraggingSession(with: [draggingItem], event: event, source: self)
+        for dragItem in itemsToDrag {
+            let pbItem = NSPasteboardItem()
+            pbItem.setString(dragItem.url.absoluteString, forType: .fileURL)
+            let draggingItem = NSDraggingItem(pasteboardWriter: pbItem)
+            draggingItem.setDraggingFrame(bounds, contents: dragItem.thumbnail)
+            draggingItems.append(draggingItem)
+        }
+
+        beginDraggingSession(with: draggingItems, event: event, source: self)
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        onMouseUp?(didDrag, mouseDownModifiers.contains(.command), mouseDownModifiers.contains(.shift))
     }
 
     @objc private func removeTapped() {
@@ -253,6 +336,8 @@ class ShelfGridItemView: NSView {
         return "\(start)...\(end)"
     }
 }
+
+// MARK: - NSDraggingSource (ShelfGridItemView)
 
 extension ShelfGridItemView: NSDraggingSource {
 
@@ -277,12 +362,9 @@ extension ShelfItemView: NSDraggingSource {
 
     func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
         switch context {
-        case .outsideApplication:
-            return [.copy, .move]
-        case .withinApplication:
-            return []
-        @unknown default:
-            return []
+        case .outsideApplication: return [.copy, .move]
+        case .withinApplication: return []
+        @unknown default: return []
         }
     }
 
