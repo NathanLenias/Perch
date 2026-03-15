@@ -34,10 +34,16 @@ class ShelfItemView: NSView {
         backgroundLayer.frame = bounds
     }
 
+    private let iconView = NSImageView()
+
     private func setupViews() {
-        let iconView = NSImageView(image: item.icon)
-        iconView.imageScaling = .scaleProportionallyDown
+        iconView.image = item.thumbnail
+        iconView.imageScaling = .scaleProportionallyUpOrDown
         iconView.translatesAutoresizingMaskIntoConstraints = false
+        iconView.wantsLayer = true
+        iconView.layer?.cornerRadius = 4
+        iconView.layer?.cornerCurve = .continuous
+        iconView.layer?.masksToBounds = true
 
         let label = NSTextField(labelWithString: item.name)
         label.font = .systemFont(ofSize: 11, weight: .medium)
@@ -115,7 +121,7 @@ class ShelfItemView: NSView {
         pasteboardItem.setString(item.url.absoluteString, forType: .fileURL)
 
         let draggingItem = NSDraggingItem(pasteboardWriter: pasteboardItem)
-        draggingItem.setDraggingFrame(bounds, contents: item.icon)
+        draggingItem.setDraggingFrame(bounds, contents: item.thumbnail)
 
         beginDraggingSession(with: [draggingItem], event: event, source: self)
     }
