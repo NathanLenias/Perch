@@ -6,6 +6,8 @@ class ShelfViewController: NSViewController {
     private let stackView = NSStackView()
     private let emptyLabel = NSTextField(labelWithString: "Drop files here")
     private let closeButton = NSButton()
+    private let toolbar = NSStackView()
+    private let toolbarSeparator = NSBox()
     private var items: [ShelfItem] = []
     private var contentView: NSView!
 
@@ -40,6 +42,7 @@ class ShelfViewController: NSViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupHeader()
+        setupToolbar()
         setupScrollView()
         setupEmptyState()
     }
@@ -76,6 +79,67 @@ class ShelfViewController: NSViewController {
         ])
     }
 
+    private func setupToolbar() {
+        let symbolConfig = NSImage.SymbolConfiguration(pointSize: 12, weight: .medium)
+
+        let gearButton = makeToolbarButton(
+            symbol: "gearshape", accessibilityLabel: "Settings",
+            config: symbolConfig, action: #selector(settingsTapped)
+        )
+        let trashButton = makeToolbarButton(
+            symbol: "trash", accessibilityLabel: "Clear all",
+            config: symbolConfig, action: #selector(clearAll)
+        )
+        let viewToggleButton = makeToolbarButton(
+            symbol: "square.grid.2x2", accessibilityLabel: "Toggle view",
+            config: symbolConfig, action: #selector(toggleViewMode)
+        )
+
+        toolbar.orientation = .horizontal
+        toolbar.distribution = .equalSpacing
+        toolbar.alignment = .centerY
+        toolbar.edgeInsets = NSEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
+        toolbar.translatesAutoresizingMaskIntoConstraints = false
+        toolbar.isHidden = true
+
+        toolbar.addArrangedSubview(gearButton)
+        toolbar.addArrangedSubview(trashButton)
+        toolbar.addArrangedSubview(viewToggleButton)
+
+        // Thin separator line above toolbar
+        toolbarSeparator.boxType = .separator
+        toolbarSeparator.translatesAutoresizingMaskIntoConstraints = false
+        toolbarSeparator.isHidden = true
+
+        contentView.addSubview(toolbarSeparator)
+        contentView.addSubview(toolbar)
+        NSLayoutConstraint.activate([
+            toolbarSeparator.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 12),
+            toolbarSeparator.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
+            toolbarSeparator.bottomAnchor.constraint(equalTo: toolbar.topAnchor),
+
+            toolbar.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            toolbar.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            toolbar.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            toolbar.heightAnchor.constraint(equalToConstant: 32),
+        ])
+    }
+
+    private func makeToolbarButton(symbol: String, accessibilityLabel: String, config: NSImage.SymbolConfiguration, action: Selector) -> NSButton {
+        let button = NSButton()
+        button.bezelStyle = .accessoryBarAction
+        button.imagePosition = .imageOnly
+        button.isBordered = false
+        button.contentTintColor = .secondaryLabelColor
+        button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: accessibilityLabel)?.withSymbolConfiguration(config)
+        button.target = self
+        button.action = action
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.widthAnchor.constraint(equalToConstant: 24).isActive = true
+        button.heightAnchor.constraint(equalToConstant: 24).isActive = true
+        return button
+    }
+
     private func setupScrollView() {
         stackView.orientation = .vertical
         stackView.alignment = .leading
@@ -96,7 +160,7 @@ class ShelfViewController: NSViewController {
             scrollView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 40),
             scrollView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: toolbar.topAnchor),
 
             stackView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
         ])
@@ -142,6 +206,14 @@ class ShelfViewController: NSViewController {
         onHideRequested?()
     }
 
+    @objc private func settingsTapped() {
+        // TODO: settings
+    }
+
+    @objc private func toggleViewMode() {
+        // TODO: toggle list/grid
+    }
+
     @objc func clearAll() {
         items.removeAll()
         rebuildItemViews()
@@ -168,6 +240,8 @@ class ShelfViewController: NSViewController {
 
     private func updateEmptyState() {
         emptyLabel.isHidden = !items.isEmpty
+        toolbar.isHidden = items.isEmpty
+        toolbarSeparator.isHidden = items.isEmpty
     }
 }
 
