@@ -8,7 +8,7 @@ class ShelfItem {
     let icon: NSImage
     let thumbnail: NSImage
 
-    private static let thumbnailSize = NSSize(width: 48, height: 48)
+    private static let thumbnailSize = NSSize(width: 160, height: 160)
 
     init(url: URL) {
         self.url = url

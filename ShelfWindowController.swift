@@ -29,8 +29,8 @@ class ShelfWindowController: NSWindowController {
 
     // MARK: - Positioning
 
-    private let shelfWidth: CGFloat = 220
-    private let shelfHeight: CGFloat = 260
+    private let shelfWidth: CGFloat = 250
+    private let shelfHeight: CGFloat = 360
 
     private var currentScreen: NSScreen {
         let mouseLocation = NSEvent.mouseLocation

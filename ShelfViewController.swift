@@ -10,6 +10,9 @@ class ShelfViewController: NSViewController {
     private let toolbarSeparator = NSBox()
     private var items: [ShelfItem] = []
     private var contentView: NSView!
+    private var viewMode: ViewMode = .grid
+
+    enum ViewMode { case list, grid }
 
     override func loadView() {
         // Rounded clip container
@@ -41,6 +44,7 @@ class ShelfViewController: NSViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        preferredContentSize = NSSize(width: 250, height: 360)
         setupHeader()
         setupToolbar()
         setupScrollView()
@@ -182,13 +186,16 @@ class ShelfViewController: NSViewController {
     // MARK: - Item Management
 
     func addItems(from urls: [URL]) {
+        var added = false
         for url in urls {
             guard !items.contains(where: { $0.url == url }) else { continue }
-            let item = ShelfItem(url: url)
-            items.append(item)
-            addItemView(for: item)
+            items.append(ShelfItem(url: url))
+            added = true
         }
-        updateEmptyState()
+        if added {
+            rebuildItemViews()
+            updateEmptyState()
+        }
     }
 
     var hasItems: Bool { !items.isEmpty }
@@ -211,7 +218,17 @@ class ShelfViewController: NSViewController {
     }
 
     @objc private func toggleViewMode() {
-        // TODO: toggle list/grid
+        viewMode = (viewMode == .list) ? .grid : .list
+        updateViewToggleIcon()
+        rebuildItemViews()
+    }
+
+    private func updateViewToggleIcon() {
+        let symbolConfig = NSImage.SymbolConfiguration(pointSize: 12, weight: .medium)
+        let symbolName = (viewMode == .list) ? "square.grid.2x2" : "list.bullet"
+        if let button = toolbar.arrangedSubviews.last as? NSButton {
+            button.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "Toggle view")?.withSymbolConfiguration(symbolConfig)
+        }
     }
 
     @objc func clearAll() {
@@ -221,20 +238,33 @@ class ShelfViewController: NSViewController {
         onBecameEmpty?()
     }
 
-    private func addItemView(for item: ShelfItem) {
-        let itemView = ShelfItemView(item: item)
-        itemView.translatesAutoresizingMaskIntoConstraints = false
-        itemView.onRemove = { [weak self] in self?.removeItem(item) }
-        itemView.onDragCompleted = { [weak self] in self?.removeItem(item) }
-
-        stackView.addArrangedSubview(itemView)
-        itemView.widthAnchor.constraint(equalTo: stackView.widthAnchor, constant: -16).isActive = true
-    }
-
     private func rebuildItemViews() {
         stackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        for item in items {
-            addItemView(for: item)
+
+        switch viewMode {
+        case .list:
+            stackView.alignment = .leading
+            stackView.spacing = 2
+            for item in items {
+                let itemView = ShelfItemView(item: item)
+                itemView.translatesAutoresizingMaskIntoConstraints = false
+                itemView.onRemove = { [weak self] in self?.removeItem(item) }
+                itemView.onDragCompleted = { [weak self] in self?.removeItem(item) }
+                stackView.addArrangedSubview(itemView)
+                itemView.widthAnchor.constraint(equalTo: stackView.widthAnchor, constant: -16).isActive = true
+            }
+
+        case .grid:
+            stackView.alignment = .leading
+            stackView.spacing = 4
+            for item in items {
+                let gridView = ShelfGridItemView(item: item)
+                gridView.translatesAutoresizingMaskIntoConstraints = false
+                gridView.onRemove = { [weak self] in self?.removeItem(item) }
+                gridView.onDragCompleted = { [weak self] in self?.removeItem(item) }
+                stackView.addArrangedSubview(gridView)
+                gridView.widthAnchor.constraint(equalTo: stackView.widthAnchor, constant: -16).isActive = true
+            }
         }
     }
 
