@@ -5,16 +5,36 @@ class ShelfViewController: NSViewController {
     private let scrollView = NSScrollView()
     private let stackView = NSStackView()
     private let emptyLabel = NSTextField(labelWithString: "Drop files here")
-    private let clearButton = NSButton()
+    private let closeButton = NSButton()
     private var items: [ShelfItem] = []
+    private var contentView: NSView!
 
     override func loadView() {
-        let container = DropTargetView()
-        container.material = .sidebar
-        container.blendingMode = .behindWindow
-        container.state = .active
-        container.onDrop = { [weak self] urls in self?.addItems(from: urls) }
-        self.view = container
+        // Rounded clip container
+        let clipView = NSView()
+        clipView.wantsLayer = true
+        clipView.layer?.cornerRadius = 20
+        clipView.layer?.cornerCurve = .continuous
+        clipView.layer?.masksToBounds = true
+
+        // Visual effect view inside — untouched, no layer manipulation
+        let effectView = DropTargetView()
+        effectView.material = .hudWindow
+        effectView.blendingMode = .behindWindow
+        effectView.state = .active
+        effectView.onDrop = { [weak self] urls in self?.addItems(from: urls) }
+        effectView.translatesAutoresizingMaskIntoConstraints = false
+
+        clipView.addSubview(effectView)
+        NSLayoutConstraint.activate([
+            effectView.topAnchor.constraint(equalTo: clipView.topAnchor),
+            effectView.leadingAnchor.constraint(equalTo: clipView.leadingAnchor),
+            effectView.trailingAnchor.constraint(equalTo: clipView.trailingAnchor),
+            effectView.bottomAnchor.constraint(equalTo: clipView.bottomAnchor),
+        ])
+
+        self.contentView = effectView
+        self.view = clipView
     }
 
     override func viewDidLoad() {
@@ -27,21 +47,32 @@ class ShelfViewController: NSViewController {
     // MARK: - Layout
 
     private func setupHeader() {
-        clearButton.bezelStyle = .accessoryBarAction
-        clearButton.image = NSImage(systemSymbolName: "xmark.circle.fill", accessibilityDescription: "Hide shelf")
-        clearButton.imagePosition = .imageOnly
-        clearButton.isBordered = false
-        clearButton.target = self
-        clearButton.action = #selector(hideShelf)
-        clearButton.translatesAutoresizingMaskIntoConstraints = false
-        clearButton.contentTintColor = .secondaryLabelColor
+        let titleLabel = NSTextField(labelWithString: "Perch")
+        titleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
+        titleLabel.textColor = .labelColor
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        view.addSubview(clearButton)
+        closeButton.bezelStyle = .accessoryBarAction
+        closeButton.image = NSImage(systemSymbolName: "xmark", accessibilityDescription: "Hide shelf")
+        closeButton.imagePosition = .imageOnly
+        closeButton.isBordered = false
+        closeButton.target = self
+        closeButton.action = #selector(hideShelf)
+        closeButton.translatesAutoresizingMaskIntoConstraints = false
+        closeButton.contentTintColor = .secondaryLabelColor
+        let symbolConfig = NSImage.SymbolConfiguration(pointSize: 10, weight: .semibold)
+        closeButton.image = NSImage(systemSymbolName: "xmark", accessibilityDescription: "Hide shelf")?.withSymbolConfiguration(symbolConfig)
+
+        contentView.addSubview(titleLabel)
+        contentView.addSubview(closeButton)
         NSLayoutConstraint.activate([
-            clearButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 8),
-            clearButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -8),
-            clearButton.widthAnchor.constraint(equalToConstant: 20),
-            clearButton.heightAnchor.constraint(equalToConstant: 20),
+            titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 14),
+            titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+
+            closeButton.centerYAnchor.constraint(equalTo: titleLabel.centerYAnchor),
+            closeButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
+            closeButton.widthAnchor.constraint(equalToConstant: 18),
+            closeButton.heightAnchor.constraint(equalToConstant: 18),
         ])
     }
 
@@ -50,20 +81,22 @@ class ShelfViewController: NSViewController {
         stackView.alignment = .leading
         stackView.spacing = 2
         stackView.translatesAutoresizingMaskIntoConstraints = false
+        stackView.edgeInsets = NSEdgeInsets(top: 4, left: 8, bottom: 8, right: 8)
 
         scrollView.documentView = stackView
         scrollView.hasVerticalScroller = true
         scrollView.drawsBackground = false
+        scrollView.scrollerStyle = .overlay
         scrollView.automaticallyAdjustsContentInsets = false
         scrollView.contentInsets = NSEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
         scrollView.translatesAutoresizingMaskIntoConstraints = false
 
-        view.addSubview(scrollView)
+        contentView.addSubview(scrollView)
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: clearButton.bottomAnchor, constant: 4),
-            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            scrollView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 40),
+            scrollView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
 
             stackView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
         ])
@@ -75,10 +108,10 @@ class ShelfViewController: NSViewController {
         emptyLabel.alignment = .center
         emptyLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        view.addSubview(emptyLabel)
+        contentView.addSubview(emptyLabel)
         NSLayoutConstraint.activate([
-            emptyLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            emptyLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            emptyLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            emptyLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor, constant: 10),
         ])
     }
 
@@ -123,7 +156,7 @@ class ShelfViewController: NSViewController {
         itemView.onDragCompleted = { [weak self] in self?.removeItem(item) }
 
         stackView.addArrangedSubview(itemView)
-        itemView.widthAnchor.constraint(equalTo: stackView.widthAnchor).isActive = true
+        itemView.widthAnchor.constraint(equalTo: stackView.widthAnchor, constant: -16).isActive = true
     }
 
     private func rebuildItemViews() {
@@ -158,7 +191,7 @@ class DropTargetView: NSVisualEffectView {
             return []
         }
         layer?.borderWidth = 2
-        layer?.borderColor = NSColor.controlAccentColor.cgColor
+        layer?.borderColor = NSColor.controlAccentColor.withAlphaComponent(0.6).cgColor
         return .copy
     }
 

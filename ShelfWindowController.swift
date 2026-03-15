@@ -21,11 +21,6 @@ class ShelfWindowController: NSWindowController {
 
         let viewController = ShelfViewController()
         window.contentViewController = viewController
-        window.contentView?.wantsLayer = true
-        window.contentView?.layer?.cornerRadius = 12
-        window.contentView?.layer?.masksToBounds = true
-
-        // Window starts hidden; position is calculated at show time
     }
 
     required init?(coder: NSCoder) {
@@ -34,9 +29,9 @@ class ShelfWindowController: NSWindowController {
 
     // MARK: - Positioning
 
-    private let shelfWidth: CGFloat = 200
+    private let shelfWidth: CGFloat = 220
+    private let shelfHeight: CGFloat = 260
 
-    /// Returns the screen where the mouse cursor currently is.
     private var currentScreen: NSScreen {
         let mouseLocation = NSEvent.mouseLocation
         return NSScreen.screens.first { NSMouseInRect(mouseLocation, $0.frame, false) } ?? NSScreen.main ?? NSScreen.screens[0]
@@ -44,9 +39,8 @@ class ShelfWindowController: NSWindowController {
 
     private func shelfFrame(for screen: NSScreen, offScreen: Bool) -> NSRect {
         let visibleFrame = screen.visibleFrame
-        let shelfHeight = max(visibleFrame.height * 0.6, 100)
         let y = visibleFrame.origin.y + (visibleFrame.height - shelfHeight) / 2
-        let x = offScreen ? visibleFrame.origin.x - shelfWidth : visibleFrame.origin.x
+        let x = offScreen ? visibleFrame.origin.x - shelfWidth : visibleFrame.origin.x + 12
 
         return NSRect(x: x, y: y, width: shelfWidth, height: shelfHeight)
     }
@@ -61,15 +55,15 @@ class ShelfWindowController: NSWindowController {
         let screen = currentScreen
         isShelfVisible = true
 
-        // Start off-screen to the left
         window.setFrame(shelfFrame(for: screen, offScreen: true), display: false)
+        window.alphaValue = 0
         window.orderFront(nil)
 
-        // Slide in
         NSAnimationContext.runAnimationGroup { ctx in
-            ctx.duration = 0.2
+            ctx.duration = 0.25
             ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
             window.animator().setFrame(shelfFrame(for: screen, offScreen: false), display: true)
+            window.animator().alphaValue = 1
         }
     }
 
@@ -83,14 +77,17 @@ class ShelfWindowController: NSWindowController {
             ctx.duration = 0.2
             ctx.timingFunction = CAMediaTimingFunction(name: .easeIn)
             window.animator().setFrame(self.shelfFrame(for: screen, offScreen: true), display: true)
+            window.animator().alphaValue = 0
         }, completionHandler: {
             window.orderOut(nil)
+            window.alphaValue = 1
         })
     }
 
     func toggleShelf() {
         if isShelfVisible { hideShelf() } else { showShelf() }
     }
+
 }
 
 // MARK: - ShelfPanel (non-activating panel)
