@@ -266,7 +266,8 @@ extension ShelfGridItemView: NSDraggingSource {
 
     func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
         NotificationCenter.default.post(name: DragDetector.resyncNotification, object: nil)
-        if operation != [] { onDragCompleted?() }
+        let droppedInShelf = window?.frame.contains(screenPoint) == true
+        if operation != [] && !droppedInShelf { onDragCompleted?() }
     }
 }
 
@@ -287,7 +288,8 @@ extension ShelfItemView: NSDraggingSource {
 
     func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
         NotificationCenter.default.post(name: DragDetector.resyncNotification, object: nil)
-        if operation != [] {
+        let droppedInShelf = window?.frame.contains(screenPoint) == true
+        if operation != [] && !droppedInShelf {
             onDragCompleted?()
         }
     }
