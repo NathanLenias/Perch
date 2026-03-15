@@ -213,6 +213,14 @@ class ShelfViewController: NSViewController {
         if items.isEmpty { onBecameEmpty?() }
     }
 
+    func ungroupItem(_ item: ShelfItem) {
+        guard item.isGroup, let index = items.firstIndex(where: { $0 === item }) else { return }
+        selectedURLs.subtract(item.urls)
+        let singles = item.urls.map { ShelfItem(url: $0) }
+        items.replaceSubrange(index...index, with: singles)
+        rebuildItemViews()
+    }
+
     private func removeSelectedItems() {
         let toRemove = selectedURLs
         items.removeAll { toRemove.contains($0.url) }
@@ -316,6 +324,7 @@ class ShelfViewController: NSViewController {
                 itemView.translatesAutoresizingMaskIntoConstraints = false
                 itemView.isSelected = selectedURLs.contains(item.url)
                 itemView.onRemove = { [weak self] in self?.removeItem(item) }
+                itemView.onUngroup = { [weak self] in self?.ungroupItem(item) }
                 itemView.onDragCompleted = { [weak self] in self?.removeSelectedItems() }
                 itemView.onMouseDown = { [weak self] cmd, shift in self?.handleMouseDown(item, command: cmd, shift: shift) }
                 itemView.onMouseUp = { [weak self] dragged, cmd, shift in self?.handleMouseUp(item, wasDragged: dragged, command: cmd, shift: shift) }
@@ -332,6 +341,7 @@ class ShelfViewController: NSViewController {
                 gridView.translatesAutoresizingMaskIntoConstraints = false
                 gridView.isSelected = selectedURLs.contains(item.url)
                 gridView.onRemove = { [weak self] in self?.removeItem(item) }
+                gridView.onUngroup = { [weak self] in self?.ungroupItem(item) }
                 gridView.onDragCompleted = { [weak self] in self?.removeSelectedItems() }
                 gridView.onMouseDown = { [weak self] cmd, shift in self?.handleMouseDown(item, command: cmd, shift: shift) }
                 gridView.onMouseUp = { [weak self] dragged, cmd, shift in self?.handleMouseUp(item, wasDragged: dragged, command: cmd, shift: shift) }

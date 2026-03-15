@@ -4,10 +4,12 @@ class ShelfItemView: NSView {
 
     let item: ShelfItem
     private let removeButton = NSButton()
+    private let ungroupButton = NSButton()
     private var trackingArea: NSTrackingArea?
     private let backgroundLayer = CALayer()
 
     var onRemove: (() -> Void)?
+    var onUngroup: (() -> Void)?
     var onDragCompleted: (() -> Void)?
     var onMouseDown: ((_ command: Bool, _ shift: Bool) -> Void)?
     var onMouseUp: ((_ wasDragged: Bool, _ command: Bool, _ shift: Bool) -> Void)?
@@ -61,6 +63,8 @@ class ShelfItemView: NSView {
         label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         label.translatesAutoresizingMaskIntoConstraints = false
 
+        let symbolConfig = NSImage.SymbolConfiguration(pointSize: 9, weight: .semibold)
+
         removeButton.bezelStyle = .accessoryBarAction
         removeButton.imagePosition = .imageOnly
         removeButton.isBordered = false
@@ -69,12 +73,25 @@ class ShelfItemView: NSView {
         removeButton.action = #selector(removeTapped)
         removeButton.translatesAutoresizingMaskIntoConstraints = false
         removeButton.isHidden = true
-        let symbolConfig = NSImage.SymbolConfiguration(pointSize: 9, weight: .semibold)
         removeButton.image = NSImage(systemSymbolName: "xmark", accessibilityDescription: "Remove")?.withSymbolConfiguration(symbolConfig)
+
+        ungroupButton.bezelStyle = .accessoryBarAction
+        ungroupButton.imagePosition = .imageOnly
+        ungroupButton.isBordered = false
+        ungroupButton.contentTintColor = .tertiaryLabelColor
+        ungroupButton.target = self
+        ungroupButton.action = #selector(ungroupTapped)
+        ungroupButton.translatesAutoresizingMaskIntoConstraints = false
+        ungroupButton.isHidden = true
+        ungroupButton.image = NSImage(systemSymbolName: "rectangle.3.group", accessibilityDescription: "Ungroup")?.withSymbolConfiguration(symbolConfig)
 
         addSubview(iconView)
         addSubview(label)
+        addSubview(ungroupButton)
         addSubview(removeButton)
+
+        // Ungroup button sits left of remove button, only visible for groups
+        let trailingAnchorView = item.isGroup ? ungroupButton : removeButton
 
         NSLayoutConstraint.activate([
             heightAnchor.constraint(equalToConstant: 36),
@@ -86,12 +103,17 @@ class ShelfItemView: NSView {
 
             label.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 8),
             label.centerYAnchor.constraint(equalTo: centerYAnchor),
-            label.trailingAnchor.constraint(lessThanOrEqualTo: removeButton.leadingAnchor, constant: -4),
+            label.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchorView.leadingAnchor, constant: -4),
 
             removeButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
             removeButton.centerYAnchor.constraint(equalTo: centerYAnchor),
             removeButton.widthAnchor.constraint(equalToConstant: 16),
             removeButton.heightAnchor.constraint(equalToConstant: 16),
+
+            ungroupButton.trailingAnchor.constraint(equalTo: removeButton.leadingAnchor, constant: -4),
+            ungroupButton.centerYAnchor.constraint(equalTo: centerYAnchor),
+            ungroupButton.widthAnchor.constraint(equalToConstant: 16),
+            ungroupButton.heightAnchor.constraint(equalToConstant: 16),
         ])
     }
 
@@ -118,6 +140,7 @@ class ShelfItemView: NSView {
 
     override func mouseEntered(with event: NSEvent) {
         removeButton.isHidden = false
+        if item.isGroup { ungroupButton.isHidden = false }
         if !isSelected {
             backgroundLayer.backgroundColor = NSColor.white.withAlphaComponent(0.12).cgColor
         }
@@ -125,6 +148,7 @@ class ShelfItemView: NSView {
 
     override func mouseExited(with event: NSEvent) {
         removeButton.isHidden = true
+        ungroupButton.isHidden = true
         updateBackgroundColor()
     }
 
@@ -166,6 +190,10 @@ class ShelfItemView: NSView {
     @objc private func removeTapped() {
         onRemove?()
     }
+
+    @objc private func ungroupTapped() {
+        onUngroup?()
+    }
 }
 
 // MARK: - ShelfGridItemView
@@ -174,10 +202,12 @@ class ShelfGridItemView: NSView {
 
     let item: ShelfItem
     private let removeButton = NSButton()
+    private let ungroupButton = NSButton()
     private var trackingArea: NSTrackingArea?
     private let selectionLayer = CALayer()
 
     var onRemove: (() -> Void)?
+    var onUngroup: (() -> Void)?
     var onDragCompleted: (() -> Void)?
     var onMouseDown: ((_ command: Bool, _ shift: Bool) -> Void)?
     var onMouseUp: ((_ wasDragged: Bool, _ command: Bool, _ shift: Bool) -> Void)?
@@ -243,6 +273,8 @@ class ShelfGridItemView: NSView {
         label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         label.translatesAutoresizingMaskIntoConstraints = false
 
+        let symbolConfig = NSImage.SymbolConfiguration(pointSize: 9, weight: .bold)
+
         removeButton.bezelStyle = .accessoryBarAction
         removeButton.imagePosition = .imageOnly
         removeButton.isBordered = false
@@ -251,11 +283,21 @@ class ShelfGridItemView: NSView {
         removeButton.action = #selector(removeTapped)
         removeButton.translatesAutoresizingMaskIntoConstraints = false
         removeButton.isHidden = true
-        let symbolConfig = NSImage.SymbolConfiguration(pointSize: 9, weight: .bold)
         removeButton.image = NSImage(systemSymbolName: "xmark.circle.fill", accessibilityDescription: "Remove")?.withSymbolConfiguration(symbolConfig)
+
+        ungroupButton.bezelStyle = .accessoryBarAction
+        ungroupButton.imagePosition = .imageOnly
+        ungroupButton.isBordered = false
+        ungroupButton.contentTintColor = .tertiaryLabelColor
+        ungroupButton.target = self
+        ungroupButton.action = #selector(ungroupTapped)
+        ungroupButton.translatesAutoresizingMaskIntoConstraints = false
+        ungroupButton.isHidden = true
+        ungroupButton.image = NSImage(systemSymbolName: "rectangle.3.group", accessibilityDescription: "Ungroup")?.withSymbolConfiguration(symbolConfig)
 
         addSubview(imageView)
         addSubview(label)
+        addSubview(ungroupButton)
         addSubview(removeButton)
 
         NSLayoutConstraint.activate([
@@ -273,6 +315,11 @@ class ShelfGridItemView: NSView {
             removeButton.trailingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: 4),
             removeButton.widthAnchor.constraint(equalToConstant: 16),
             removeButton.heightAnchor.constraint(equalToConstant: 16),
+
+            ungroupButton.topAnchor.constraint(equalTo: removeButton.bottomAnchor, constant: 2),
+            ungroupButton.trailingAnchor.constraint(equalTo: removeButton.trailingAnchor),
+            ungroupButton.widthAnchor.constraint(equalToConstant: 16),
+            ungroupButton.heightAnchor.constraint(equalToConstant: 16),
         ])
     }
 
@@ -291,10 +338,12 @@ class ShelfGridItemView: NSView {
 
     override func mouseEntered(with event: NSEvent) {
         removeButton.isHidden = false
+        if item.isGroup { ungroupButton.isHidden = false }
     }
 
     override func mouseExited(with event: NSEvent) {
         removeButton.isHidden = true
+        ungroupButton.isHidden = true
     }
 
     // MARK: - Click & Drag
@@ -331,6 +380,10 @@ class ShelfGridItemView: NSView {
 
     @objc private func removeTapped() {
         onRemove?()
+    }
+
+    @objc private func ungroupTapped() {
+        onUngroup?()
     }
 
     private static func truncateMiddle(_ string: String, maxLength: Int) -> String {
