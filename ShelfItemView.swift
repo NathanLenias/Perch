@@ -46,7 +46,7 @@ class ShelfItemView: NSView {
     private let iconView = NSImageView()
 
     private func setupViews() {
-        iconView.image = item.thumbnail
+        iconView.image = item.isGroup ? item.icon : item.thumbnail
         iconView.imageScaling = .scaleProportionallyUpOrDown
         iconView.translatesAutoresizingMaskIntoConstraints = false
         iconView.wantsLayer = true
@@ -144,11 +144,14 @@ class ShelfItemView: NSView {
         var draggingItems: [NSDraggingItem] = []
 
         for dragItem in itemsToDrag {
-            let pbItem = NSPasteboardItem()
-            pbItem.setString(dragItem.url.absoluteString, forType: .fileURL)
-            let draggingItem = NSDraggingItem(pasteboardWriter: pbItem)
-            draggingItem.setDraggingFrame(bounds, contents: dragItem.thumbnail)
-            draggingItems.append(draggingItem)
+            // For groups, create one NSDraggingItem per URL
+            for url in dragItem.urls {
+                let pbItem = NSPasteboardItem()
+                pbItem.setString(url.absoluteString, forType: .fileURL)
+                let draggingItem = NSDraggingItem(pasteboardWriter: pbItem)
+                draggingItem.setDraggingFrame(bounds, contents: dragItem.thumbnail)
+                draggingItems.append(draggingItem)
+            }
         }
 
         beginDraggingSession(with: draggingItems, event: event, source: self)
@@ -222,7 +225,7 @@ class ShelfGridItemView: NSView {
     }
 
     private func setupViews() {
-        let imageView = NSImageView(image: item.thumbnail)
+        let imageView = NSImageView(image: item.thumbnail)  // Groups already have composite thumbnail
         imageView.imageScaling = .scaleProportionallyUpOrDown
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.wantsLayer = true
@@ -310,11 +313,13 @@ class ShelfGridItemView: NSView {
         var draggingItems: [NSDraggingItem] = []
 
         for dragItem in itemsToDrag {
-            let pbItem = NSPasteboardItem()
-            pbItem.setString(dragItem.url.absoluteString, forType: .fileURL)
-            let draggingItem = NSDraggingItem(pasteboardWriter: pbItem)
-            draggingItem.setDraggingFrame(bounds, contents: dragItem.thumbnail)
-            draggingItems.append(draggingItem)
+            for url in dragItem.urls {
+                let pbItem = NSPasteboardItem()
+                pbItem.setString(url.absoluteString, forType: .fileURL)
+                let draggingItem = NSDraggingItem(pasteboardWriter: pbItem)
+                draggingItem.setDraggingFrame(bounds, contents: dragItem.thumbnail)
+                draggingItems.append(draggingItem)
+            }
         }
 
         beginDraggingSession(with: draggingItems, event: event, source: self)

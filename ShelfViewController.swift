@@ -187,16 +187,18 @@ class ShelfViewController: NSViewController {
     // MARK: - Item Management
 
     func addItems(from urls: [URL]) {
-        var added = false
-        for url in urls {
-            guard !items.contains(where: { $0.url == url }) else { continue }
-            items.append(ShelfItem(url: url))
-            added = true
+        let newURLs = urls.filter { url in
+            !items.contains(where: { $0.urls.contains(url) })
         }
-        if added {
-            rebuildItemViews()
-            updateEmptyState()
+        guard !newURLs.isEmpty else { return }
+
+        if newURLs.count == 1 {
+            items.append(ShelfItem(url: newURLs[0]))
+        } else {
+            items.append(ShelfItem(urls: newURLs))
         }
+        rebuildItemViews()
+        updateEmptyState()
     }
 
     var hasItems: Bool { !items.isEmpty }
@@ -204,8 +206,8 @@ class ShelfViewController: NSViewController {
     var onHideRequested: (() -> Void)?
 
     func removeItem(_ item: ShelfItem) {
-        items.removeAll { $0.url == item.url }
-        selectedURLs.remove(item.url)
+        items.removeAll { $0 === item }
+        for url in item.urls { selectedURLs.remove(url) }
         rebuildItemViews()
         updateEmptyState()
         if items.isEmpty { onBecameEmpty?() }
