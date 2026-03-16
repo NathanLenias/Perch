@@ -34,6 +34,10 @@ Perch is a free, open-source alternative to Yoink. When you start dragging a fil
 
 ## Install
 
+### Download
+
+Download the latest version from [GitHub Releases](https://github.com/NathanLenias/Perch/releases), unzip, and drag `Perch.app` to your `/Applications` folder.
+
 ### Build from source
 
 Requires Xcode 15+ and macOS 14 (Sonoma) or later.
@@ -44,7 +48,7 @@ cd Perch
 xcodebuild -project Perch.xcodeproj -scheme Perch -configuration Release build
 ```
 
-The built app is at `~/Library/Developer/Xcode/DerivedData/Perch-*/Build/Products/Release/Perch.app`. Copy it to `/Applications` if you want.
+The built app is at `~/Library/Developer/Xcode/DerivedData/Perch-*/Build/Products/Release/Perch.app`. Copy it to `/Applications`.
 
 ### Permissions
 

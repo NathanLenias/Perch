@@ -65,4 +65,5 @@ CLAUDE.md
 memory/
 prompt.md
 round_icon.swift
+*.zip
 .DS_Store
