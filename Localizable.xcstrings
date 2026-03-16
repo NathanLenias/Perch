@@ -194,13 +194,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Clear all"
+            "value" : "Clear Perch"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tout supprimer"
+            "value" : "Vider Perch"
           }
         }
       }
@@ -228,13 +228,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Remove"
+            "value" : "Remove item"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Supprimer"
+            "value" : "Retirer"
           }
         }
       }
@@ -245,13 +245,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ungroup"
+            "value" : "Split"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "D\u00e9grouper"
+            "value" : "Diviser"
           }
         }
       }

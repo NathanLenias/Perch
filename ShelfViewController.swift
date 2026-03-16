@@ -93,7 +93,7 @@ class ShelfViewController: NSViewController {
             config: symbolConfig, action: #selector(settingsTapped)
         )
         let trashButton = makeToolbarButton(
-            symbol: "trash", accessibilityLabel: String(localized: "a11y.clearAll", defaultValue: "Clear all"),
+            symbol: "trash", accessibilityLabel: String(localized: "a11y.clearAll", defaultValue: "Clear Perch"),
             config: symbolConfig, action: #selector(clearAll)
         )
         let viewToggleButton = makeToolbarButton(
