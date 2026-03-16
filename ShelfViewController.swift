@@ -1,10 +1,11 @@
 import AppKit
+import ServiceManagement
 
 class ShelfViewController: NSViewController {
 
     private let scrollView = NSScrollView()
     private let stackView = NSStackView()
-    private let emptyLabel = NSTextField(labelWithString: "Drop files here")
+    private let emptyLabel = NSTextField(labelWithString: String(localized: "drop.empty", defaultValue: "Drop files here"))
     private let emptyImageView = NSImageView()
     private let closeButton = NSButton()
     private let toolbar = NSStackView()
@@ -56,7 +57,7 @@ class ShelfViewController: NSViewController {
     // MARK: - Layout
 
     private func setupHeader() {
-        let titleLabel = NSTextField(labelWithString: "Perch")
+        let titleLabel = NSTextField(labelWithString: String(localized: "shelf.title", defaultValue: "Perch"))
         titleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
         titleLabel.textColor = .labelColor
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -69,7 +70,7 @@ class ShelfViewController: NSViewController {
         closeButton.translatesAutoresizingMaskIntoConstraints = false
         closeButton.contentTintColor = .secondaryLabelColor
         let symbolConfig = NSImage.SymbolConfiguration(pointSize: 10, weight: .semibold)
-        closeButton.image = NSImage(systemSymbolName: "xmark", accessibilityDescription: "Hide shelf")?.withSymbolConfiguration(symbolConfig)
+        closeButton.image = NSImage(systemSymbolName: "xmark", accessibilityDescription: String(localized: "a11y.hideShelf", defaultValue: "Hide shelf"))?.withSymbolConfiguration(symbolConfig)
 
         contentView.addSubview(titleLabel)
         contentView.addSubview(closeButton)
@@ -88,15 +89,15 @@ class ShelfViewController: NSViewController {
         let symbolConfig = NSImage.SymbolConfiguration(pointSize: 12, weight: .medium)
 
         let gearButton = makeToolbarButton(
-            symbol: "gearshape", accessibilityLabel: "Settings",
+            symbol: "gearshape", accessibilityLabel: String(localized: "a11y.settings", defaultValue: "Settings"),
             config: symbolConfig, action: #selector(settingsTapped)
         )
         let trashButton = makeToolbarButton(
-            symbol: "trash", accessibilityLabel: "Clear all",
+            symbol: "trash", accessibilityLabel: String(localized: "a11y.clearAll", defaultValue: "Clear all"),
             config: symbolConfig, action: #selector(clearAll)
         )
         let viewToggleButton = makeToolbarButton(
-            symbol: "square.grid.2x2", accessibilityLabel: "Toggle view",
+            symbol: "square.grid.2x2", accessibilityLabel: String(localized: "a11y.toggleView", defaultValue: "Toggle view"),
             config: symbolConfig, action: #selector(toggleViewMode)
         )
 
@@ -137,6 +138,7 @@ class ShelfViewController: NSViewController {
         button.isBordered = false
         button.contentTintColor = .secondaryLabelColor
         button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: accessibilityLabel)?.withSymbolConfiguration(config)
+        button.toolTip = accessibilityLabel
         button.target = self
         button.action = action
         button.translatesAutoresizingMaskIntoConstraints = false
@@ -175,6 +177,7 @@ class ShelfViewController: NSViewController {
         emptyImageView.image = NSImage(named: "BirdPerch")
         emptyImageView.imageScaling = .scaleProportionallyUpOrDown
         emptyImageView.translatesAutoresizingMaskIntoConstraints = false
+        emptyImageView.unregisterDraggedTypes()
 
         emptyLabel.font = .systemFont(ofSize: 12)
         emptyLabel.textColor = .tertiaryLabelColor
@@ -298,7 +301,59 @@ class ShelfViewController: NSViewController {
     }
 
     @objc private func settingsTapped() {
-        // TODO: settings
+        guard let button = toolbar.arrangedSubviews.first as? NSButton else { return }
+
+        let menu = NSMenu()
+
+        let launchItem = NSMenuItem(
+            title: String(localized: "menu.launchAtLogin", defaultValue: "Launch Perch at Login"),
+            action: #selector(toggleLaunchAtLogin(_:)), keyEquivalent: ""
+        )
+        launchItem.target = self
+        launchItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        menu.addItem(launchItem)
+
+        menu.addItem(NSMenuItem.separator())
+
+        let aboutItem = NSMenuItem(
+            title: String(localized: "menu.about", defaultValue: "About Perch"),
+            action: #selector(showAbout), keyEquivalent: ""
+        )
+        aboutItem.target = self
+        menu.addItem(aboutItem)
+
+        let quitItem = NSMenuItem(
+            title: String(localized: "menu.quit", defaultValue: "Quit Perch"),
+            action: #selector(quitApp), keyEquivalent: ""
+        )
+        quitItem.target = self
+        menu.addItem(quitItem)
+
+        let location = NSPoint(x: 0, y: button.bounds.height + 4)
+        menu.popUp(positioning: nil, at: location, in: button)
+    }
+
+    @objc private func toggleLaunchAtLogin(_ sender: NSMenuItem) {
+        do {
+            if SMAppService.mainApp.status == .enabled {
+                try SMAppService.mainApp.unregister()
+                sender.state = .off
+            } else {
+                try SMAppService.mainApp.register()
+                sender.state = .on
+            }
+        } catch {
+            // Registration failed silently — user can retry
+        }
+    }
+
+    @objc private func showAbout() {
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.orderFrontStandardAboutPanel(nil)
+    }
+
+    @objc private func quitApp() {
+        NSApplication.shared.terminate(nil)
     }
 
     @objc private func toggleViewMode() {
@@ -311,7 +366,7 @@ class ShelfViewController: NSViewController {
         let symbolConfig = NSImage.SymbolConfiguration(pointSize: 12, weight: .medium)
         let symbolName = (viewMode == .list) ? "square.grid.2x2" : "list.bullet"
         if let button = toolbar.arrangedSubviews.last as? NSButton {
-            button.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "Toggle view")?.withSymbolConfiguration(symbolConfig)
+            button.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: String(localized: "a11y.toggleView", defaultValue: "Toggle view"))?.withSymbolConfiguration(symbolConfig)
         }
     }
 

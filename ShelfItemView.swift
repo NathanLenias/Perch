@@ -51,7 +51,7 @@ class BaseShelfItemView: NSView, NSDraggingSource {
         removeButton.action = #selector(removeTapped)
         removeButton.translatesAutoresizingMaskIntoConstraints = false
         removeButton.isHidden = true
-        removeButton.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "Remove")?.withSymbolConfiguration(symbolConfig)
+        removeButton.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: String(localized: "a11y.remove", defaultValue: "Remove"))?.withSymbolConfiguration(symbolConfig)
     }
 
     func setupUngroupButton(symbolConfig: NSImage.SymbolConfiguration) {
@@ -63,7 +63,7 @@ class BaseShelfItemView: NSView, NSDraggingSource {
         ungroupButton.action = #selector(ungroupTapped)
         ungroupButton.translatesAutoresizingMaskIntoConstraints = false
         ungroupButton.isHidden = true
-        ungroupButton.image = NSImage(systemSymbolName: "rectangle.3.group", accessibilityDescription: "Ungroup")?.withSymbolConfiguration(symbolConfig)
+        ungroupButton.image = NSImage(systemSymbolName: "rectangle.3.group", accessibilityDescription: String(localized: "a11y.ungroup", defaultValue: "Ungroup"))?.withSymbolConfiguration(symbolConfig)
     }
 
     // MARK: - Hover tracking

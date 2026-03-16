@@ -25,7 +25,7 @@ class ShelfItem {
     init(urls: [URL]) {
         precondition(urls.count >= 2)
         self.urls = urls
-        self.name = "\(urls.count) files"
+        self.name = String(localized: "group.fileCount \(urls.count)")
 
         // Composite stacked icon from up to 3 first files
         let stackIcons = urls.prefix(3).map { url -> NSImage in
