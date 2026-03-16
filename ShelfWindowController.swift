@@ -93,6 +93,6 @@ class ShelfWindowController: NSWindowController {
 // MARK: - ShelfPanel (non-activating panel)
 
 private class ShelfPanel: NSPanel {
-    override var canBecomeKey: Bool { true }
+    override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
 }

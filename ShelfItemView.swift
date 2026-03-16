@@ -95,6 +95,8 @@ class BaseShelfItemView: NSView, NSDraggingSource {
 
     // MARK: - Click & Drag
 
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
     override func mouseDown(with event: NSEvent) {
         didDrag = false
         mouseDownModifiers = event.modifierFlags
