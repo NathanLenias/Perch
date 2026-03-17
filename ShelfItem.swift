@@ -55,27 +55,24 @@ class ShelfItem {
         let canvasSize = NSSize(width: size.width + totalOffset, height: size.height + totalOffset)
         let iconSize = NSSize(width: size.width * 0.85, height: size.height * 0.85)
 
-        let composite = NSImage(size: canvasSize)
-        composite.lockFocus()
+        return NSImage(size: canvasSize, flipped: false) { _ in
+            for (i, icon) in icons.reversed().enumerated() {
+                let reverseIndex = icons.count - 1 - i
+                let x = CGFloat(reverseIndex) * offset
+                let y = CGFloat(i) * offset
+                let rect = NSRect(origin: NSPoint(x: x, y: y), size: iconSize)
 
-        for (i, icon) in icons.reversed().enumerated() {
-            let reverseIndex = icons.count - 1 - i
-            let x = CGFloat(reverseIndex) * offset
-            let y = CGFloat(i) * offset
-            let rect = NSRect(origin: NSPoint(x: x, y: y), size: iconSize)
+                // Subtle shadow for depth
+                let shadow = NSShadow()
+                shadow.shadowOffset = NSSize(width: 0, height: -1)
+                shadow.shadowBlurRadius = 2
+                shadow.shadowColor = NSColor.black.withAlphaComponent(0.2)
+                shadow.set()
 
-            // Subtle shadow for depth
-            let shadow = NSShadow()
-            shadow.shadowOffset = NSSize(width: 0, height: -1)
-            shadow.shadowBlurRadius = 2
-            shadow.shadowColor = NSColor.black.withAlphaComponent(0.2)
-            shadow.set()
-
-            icon.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1.0)
+                icon.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1.0)
+            }
+            return true
         }
-
-        composite.unlockFocus()
-        return composite
     }
 
     // MARK: - Single-file thumbnail
@@ -104,13 +101,10 @@ class ShelfItem {
         let scale = min(targetSize.width / original.width, targetSize.height / original.height)
         let newSize = NSSize(width: original.width * scale, height: original.height * scale)
 
-        let resized = NSImage(size: newSize)
-        resized.lockFocus()
-        image.draw(in: NSRect(origin: .zero, size: newSize),
-                   from: NSRect(origin: .zero, size: original),
-                   operation: .copy,
-                   fraction: 1.0)
-        resized.unlockFocus()
-        return resized
+        return NSImage(size: newSize, flipped: false) { rect in
+            image.draw(in: rect, from: NSRect(origin: .zero, size: original),
+                       operation: .copy, fraction: 1.0)
+            return true
+        }
     }
 }
