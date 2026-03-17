@@ -287,12 +287,8 @@ class ShelfViewController: NSViewController {
     }
 
     private func updateSelectionVisuals() {
-        for view in stackView.arrangedSubviews {
-            if let listView = view as? ShelfItemView {
-                listView.isSelected = selectedURLs.contains(listView.item.url)
-            } else if let gridView = view as? ShelfGridItemView {
-                gridView.isSelected = selectedURLs.contains(gridView.item.url)
-            }
+        for case let itemView as BaseShelfItemView in stackView.arrangedSubviews {
+            itemView.isSelected = selectedURLs.contains(itemView.item.url)
         }
     }
 
@@ -307,9 +303,9 @@ class ShelfViewController: NSViewController {
 
         let launchItem = NSMenuItem(
             title: String(localized: "menu.launchAtLogin", defaultValue: "Launch Perch at Login"),
-            action: #selector(toggleLaunchAtLogin(_:)), keyEquivalent: ""
+            action: #selector(AppDelegate.toggleLaunchAtLogin(_:)), keyEquivalent: ""
         )
-        launchItem.target = self
+        launchItem.target = NSApp.delegate
         launchItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
         menu.addItem(launchItem)
 
@@ -317,44 +313,22 @@ class ShelfViewController: NSViewController {
 
         let aboutItem = NSMenuItem(
             title: String(localized: "menu.about", defaultValue: "About Perch"),
-            action: #selector(showAbout), keyEquivalent: ""
+            action: #selector(AppDelegate.showAbout), keyEquivalent: ""
         )
-        aboutItem.target = self
+        aboutItem.target = NSApp.delegate
         menu.addItem(aboutItem)
 
         let quitItem = NSMenuItem(
             title: String(localized: "menu.quit", defaultValue: "Quit Perch"),
-            action: #selector(quitApp), keyEquivalent: ""
+            action: #selector(AppDelegate.quitApp), keyEquivalent: ""
         )
-        quitItem.target = self
+        quitItem.target = NSApp.delegate
         menu.addItem(quitItem)
 
         let location = NSPoint(x: 0, y: button.bounds.height + 4)
         menu.popUp(positioning: nil, at: location, in: button)
     }
 
-    @objc private func toggleLaunchAtLogin(_ sender: NSMenuItem) {
-        do {
-            if SMAppService.mainApp.status == .enabled {
-                try SMAppService.mainApp.unregister()
-                sender.state = .off
-            } else {
-                try SMAppService.mainApp.register()
-                sender.state = .on
-            }
-        } catch {
-            // Registration failed silently — user can retry
-        }
-    }
-
-    @objc private func showAbout() {
-        NSApp.activate(ignoringOtherApps: true)
-        NSApp.orderFrontStandardAboutPanel(nil)
-    }
-
-    @objc private func quitApp() {
-        NSApplication.shared.terminate(nil)
-    }
 
     @objc private func toggleViewMode() {
         viewMode = (viewMode == .list) ? .grid : .list
@@ -379,41 +353,23 @@ class ShelfViewController: NSViewController {
 
     private func rebuildItemViews() {
         stackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        stackView.alignment = .leading
+        stackView.spacing = (viewMode == .list) ? 2 : 4
 
-        switch viewMode {
-        case .list:
-            stackView.alignment = .leading
-            stackView.spacing = 2
-            for item in items {
-                let itemView = ShelfItemView(item: item)
-                itemView.translatesAutoresizingMaskIntoConstraints = false
-                itemView.isSelected = selectedURLs.contains(item.url)
-                itemView.onRemove = { [weak self] in self?.removeItem(item) }
-                itemView.onUngroup = { [weak self] in self?.ungroupItem(item) }
-                itemView.onDragCompleted = { [weak self] in self?.removeSelectedItems() }
-                itemView.onMouseDown = { [weak self] cmd, shift in self?.handleMouseDown(item, command: cmd, shift: shift) }
-                itemView.onMouseUp = { [weak self] dragged, cmd, shift in self?.handleMouseUp(item, wasDragged: dragged, command: cmd, shift: shift) }
-                itemView.draggedItems = { [weak self] in self?.selectedItems() ?? [item] }
-                stackView.addArrangedSubview(itemView)
-                itemView.widthAnchor.constraint(equalTo: stackView.widthAnchor, constant: -16).isActive = true
-            }
-
-        case .grid:
-            stackView.alignment = .leading
-            stackView.spacing = 4
-            for item in items {
-                let gridView = ShelfGridItemView(item: item)
-                gridView.translatesAutoresizingMaskIntoConstraints = false
-                gridView.isSelected = selectedURLs.contains(item.url)
-                gridView.onRemove = { [weak self] in self?.removeItem(item) }
-                gridView.onUngroup = { [weak self] in self?.ungroupItem(item) }
-                gridView.onDragCompleted = { [weak self] in self?.removeSelectedItems() }
-                gridView.onMouseDown = { [weak self] cmd, shift in self?.handleMouseDown(item, command: cmd, shift: shift) }
-                gridView.onMouseUp = { [weak self] dragged, cmd, shift in self?.handleMouseUp(item, wasDragged: dragged, command: cmd, shift: shift) }
-                gridView.draggedItems = { [weak self] in self?.selectedItems() ?? [item] }
-                stackView.addArrangedSubview(gridView)
-                gridView.widthAnchor.constraint(equalTo: stackView.widthAnchor, constant: -16).isActive = true
-            }
+        for item in items {
+            let itemView: BaseShelfItemView = (viewMode == .list)
+                ? ShelfItemView(item: item)
+                : ShelfGridItemView(item: item)
+            itemView.translatesAutoresizingMaskIntoConstraints = false
+            itemView.isSelected = selectedURLs.contains(item.url)
+            itemView.onRemove = { [weak self] in self?.removeItem(item) }
+            itemView.onUngroup = { [weak self] in self?.ungroupItem(item) }
+            itemView.onDragCompleted = { [weak self] in self?.removeSelectedItems() }
+            itemView.onMouseDown = { [weak self] cmd, shift in self?.handleMouseDown(item, command: cmd, shift: shift) }
+            itemView.onMouseUp = { [weak self] dragged, cmd, shift in self?.handleMouseUp(item, wasDragged: dragged, command: cmd, shift: shift) }
+            itemView.draggedItems = { [weak self] in self?.selectedItems() ?? [item] }
+            stackView.addArrangedSubview(itemView)
+            itemView.widthAnchor.constraint(equalTo: stackView.widthAnchor, constant: -16).isActive = true
         }
     }
 

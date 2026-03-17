@@ -70,6 +70,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         ))
 
         menu.items.forEach { $0.target = self }
+        menu.delegate = self
         statusItem.menu = menu
     }
 
@@ -86,7 +87,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    @objc private func toggleLaunchAtLogin(_ sender: NSMenuItem) {
+    @objc func toggleLaunchAtLogin(_ sender: NSMenuItem) {
         do {
             if SMAppService.mainApp.status == .enabled {
                 try SMAppService.mainApp.unregister()
@@ -100,12 +101,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    @objc private func showAbout() {
+    @objc func showAbout() {
         NSApp.activate(ignoringOtherApps: true)
         NSApp.orderFrontStandardAboutPanel(nil)
     }
 
-    @objc private func quitApp() {
+    @objc func quitApp() {
         NSApplication.shared.terminate(nil)
     }
 
@@ -114,6 +115,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             item.title = shelfWindowController.isShelfVisible
                 ? String(localized: "menu.hidePerch", defaultValue: "Hide Perch")
                 : String(localized: "menu.showPerch", defaultValue: "Show Perch")
+        }
+    }
+}
+
+// MARK: - NSMenuDelegate
+
+extension AppDelegate: NSMenuDelegate {
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        updateMenuItemTitle()
+        for item in menu.items where item.action == #selector(toggleLaunchAtLogin) {
+            item.state = SMAppService.mainApp.status == .enabled ? .on : .off
         }
     }
 }

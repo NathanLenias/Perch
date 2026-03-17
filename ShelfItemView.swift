@@ -110,12 +110,18 @@ class BaseShelfItemView: NSView, NSDraggingSource {
         let itemsToDrag = draggedItems?() ?? [item]
         var draggingItems: [NSDraggingItem] = []
 
+        let dragSize = NSSize(width: 48, height: 48)
+        let mouseInView = convert(event.locationInWindow, from: nil)
+        let dragOrigin = NSPoint(x: mouseInView.x - dragSize.width / 2,
+                                 y: mouseInView.y - dragSize.height / 2)
+        let dragRect = NSRect(origin: dragOrigin, size: dragSize)
+
         for dragItem in itemsToDrag {
             for url in dragItem.urls {
                 let pbItem = NSPasteboardItem()
                 pbItem.setString(url.absoluteString, forType: .fileURL)
                 let draggingItem = NSDraggingItem(pasteboardWriter: pbItem)
-                draggingItem.setDraggingFrame(bounds, contents: dragItem.thumbnail)
+                draggingItem.setDraggingFrame(dragRect, contents: dragItem.thumbnail)
                 draggingItems.append(draggingItem)
             }
         }
