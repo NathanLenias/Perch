@@ -77,14 +77,18 @@ class ShelfItem {
 
     // MARK: - Single-file thumbnail
 
+    private static let maxThumbnailFileSize: Int = 50_000_000 // 50 MB
+
     private static func generateThumbnail(for url: URL) -> NSImage {
         let type = UTType(filenameExtension: url.pathExtension)
+        let fileSize = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0
 
-        if type?.conforms(to: .image) == true, let image = NSImage(contentsOf: url) {
+        if type?.conforms(to: .image) == true, fileSize < maxThumbnailFileSize,
+           let image = NSImage(contentsOf: url) {
             return resize(image, to: thumbnailSize)
         }
 
-        if type?.conforms(to: .pdf) == true,
+        if type?.conforms(to: .pdf) == true, fileSize < maxThumbnailFileSize,
            let page = PDFDocument(url: url)?.page(at: 0) {
             let pageImage = page.thumbnail(of: thumbnailSize, for: .mediaBox)
             return pageImage
