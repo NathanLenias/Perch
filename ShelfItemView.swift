@@ -14,6 +14,8 @@ class BaseShelfItemView: NSView, NSDraggingSource {
     var onUngroup: (() -> Void)?
     var onCopy: (() -> Void)?
     var onPreview: (() -> Void)?
+    /// Called with true when a drag-out session starts, false when it ends.
+    var onDragSessionChanged: ((Bool) -> Void)?
     var onDragCompleted: (() -> Void)?
     var onMouseDown: ((_ command: Bool, _ shift: Bool) -> Void)?
     var onMouseUp: ((_ wasDragged: Bool, _ command: Bool, _ shift: Bool) -> Void)?
@@ -183,7 +185,12 @@ class BaseShelfItemView: NSView, NSDraggingSource {
         }
     }
 
+    func draggingSession(_ session: NSDraggingSession, willBeginAt screenPoint: NSPoint) {
+        onDragSessionChanged?(true)
+    }
+
     func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
+        onDragSessionChanged?(false)
         NotificationCenter.default.post(name: DragDetector.resyncNotification, object: nil)
         let droppedInShelf = window?.frame.contains(screenPoint) == true
         guard operation != [], !droppedInShelf else { return }
@@ -231,6 +238,7 @@ class ShelfItemView: BaseShelfItemView {
 
     private let backgroundLayer = CALayer()
     private let iconView = NSImageView()
+    private let countBadge = NSTextField(labelWithString: "")
 
     override init(item: ShelfItem) {
         super.init(item: item)
@@ -263,12 +271,33 @@ class ShelfItemView: BaseShelfItemView {
         iconView.layer?.cornerCurve = .continuous
         iconView.layer?.masksToBounds = true
 
-        let label = NSTextField(labelWithString: item.name)
-        label.font = .systemFont(ofSize: 11, weight: .medium)
-        label.textColor = .labelColor
-        label.lineBreakMode = .byTruncatingTail
-        label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        label.translatesAutoresizingMaskIntoConstraints = false
+        let nameLabel = NSTextField(labelWithString: item.name)
+        nameLabel.font = .systemFont(ofSize: 11, weight: .medium)
+        nameLabel.textColor = .labelColor
+        nameLabel.lineBreakMode = .byTruncatingMiddle
+        nameLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+
+        let subtitleLabel = NSTextField(labelWithString: item.subtitle)
+        subtitleLabel.font = .systemFont(ofSize: 9.5)
+        subtitleLabel.textColor = .tertiaryLabelColor
+        subtitleLabel.lineBreakMode = .byTruncatingTail
+        subtitleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+
+        let textStack = NSStackView(views: [nameLabel, subtitleLabel])
+        textStack.orientation = .vertical
+        textStack.alignment = .leading
+        textStack.spacing = 1
+        textStack.translatesAutoresizingMaskIntoConstraints = false
+
+        countBadge.stringValue = "\(item.fileCount)"
+        countBadge.font = .systemFont(ofSize: 9, weight: .semibold)
+        countBadge.textColor = .secondaryLabelColor
+        countBadge.alignment = .center
+        countBadge.wantsLayer = true
+        countBadge.layer?.cornerRadius = 9
+        countBadge.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.1).cgColor
+        countBadge.translatesAutoresizingMaskIntoConstraints = false
+        countBadge.isHidden = !item.isGroup
 
         let symbolConfig = NSImage.SymbolConfiguration(pointSize: 9, weight: .semibold)
         setupRemoveButton(symbolConfig: symbolConfig)
@@ -277,7 +306,8 @@ class ShelfItemView: BaseShelfItemView {
         setupPreviewButton(symbolConfig: symbolConfig)
 
         addSubview(iconView)
-        addSubview(label)
+        addSubview(textStack)
+        addSubview(countBadge)
         addSubview(ungroupButton)
         addSubview(copyButton)
         addSubview(previewButton)
@@ -288,16 +318,21 @@ class ShelfItemView: BaseShelfItemView {
         let labelNeighbor = item.isGroup ? copyButton : previewButton
 
         NSLayoutConstraint.activate([
-            heightAnchor.constraint(equalToConstant: 36),
+            heightAnchor.constraint(equalToConstant: 46),
 
             iconView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
             iconView.centerYAnchor.constraint(equalTo: centerYAnchor),
-            iconView.widthAnchor.constraint(equalToConstant: 24),
-            iconView.heightAnchor.constraint(equalToConstant: 24),
+            iconView.widthAnchor.constraint(equalToConstant: 30),
+            iconView.heightAnchor.constraint(equalToConstant: 30),
 
-            label.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 8),
-            label.centerYAnchor.constraint(equalTo: centerYAnchor),
-            label.trailingAnchor.constraint(lessThanOrEqualTo: labelNeighbor.leadingAnchor, constant: -4),
+            textStack.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 9),
+            textStack.centerYAnchor.constraint(equalTo: centerYAnchor),
+            textStack.trailingAnchor.constraint(lessThanOrEqualTo: labelNeighbor.leadingAnchor, constant: -4),
+
+            countBadge.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
+            countBadge.centerYAnchor.constraint(equalTo: centerYAnchor),
+            countBadge.widthAnchor.constraint(greaterThanOrEqualToConstant: 18),
+            countBadge.heightAnchor.constraint(equalToConstant: 18),
 
             removeButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
             removeButton.centerYAnchor.constraint(equalTo: centerYAnchor),
@@ -323,19 +358,21 @@ class ShelfItemView: BaseShelfItemView {
 
     override func updateSelectionVisual() {
         if isSelected {
-            backgroundLayer.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.3).cgColor
+            backgroundLayer.backgroundColor = NSColor.perchAccent.withAlphaComponent(0.3).cgColor
         } else {
             backgroundLayer.backgroundColor = NSColor.white.withAlphaComponent(0.06).cgColor
         }
     }
 
     override func mouseEnteredExtra() {
+        countBadge.isHidden = true
         if !isSelected {
             backgroundLayer.backgroundColor = NSColor.white.withAlphaComponent(0.12).cgColor
         }
     }
 
     override func mouseExitedExtra() {
+        countBadge.isHidden = !item.isGroup
         updateSelectionVisual()
     }
 }
@@ -371,8 +408,8 @@ class ShelfGridItemView: BaseShelfItemView {
     override func updateSelectionVisual() {
         if isSelected {
             selectionLayer.borderWidth = 2
-            selectionLayer.borderColor = NSColor.controlAccentColor.withAlphaComponent(0.6).cgColor
-            selectionLayer.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.1).cgColor
+            selectionLayer.borderColor = NSColor.perchAccent.withAlphaComponent(0.6).cgColor
+            selectionLayer.backgroundColor = NSColor.perchAccent.withAlphaComponent(0.1).cgColor
         } else {
             selectionLayer.borderWidth = 0
             selectionLayer.backgroundColor = nil
@@ -390,13 +427,22 @@ class ShelfGridItemView: BaseShelfItemView {
 
         let displayName = Self.truncateMiddle(item.name, maxLength: 20)
         let label = NSTextField(labelWithString: displayName)
-        label.font = .systemFont(ofSize: 10)
-        label.textColor = .secondaryLabelColor
+        label.font = .systemFont(ofSize: 10, weight: .medium)
+        label.textColor = .labelColor
         label.alignment = .center
         label.lineBreakMode = .byClipping
         label.maximumNumberOfLines = 1
         label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         label.translatesAutoresizingMaskIntoConstraints = false
+
+        let subtitleLabel = NSTextField(labelWithString: item.subtitle)
+        subtitleLabel.font = .systemFont(ofSize: 9)
+        subtitleLabel.textColor = .tertiaryLabelColor
+        subtitleLabel.alignment = .center
+        subtitleLabel.lineBreakMode = .byTruncatingTail
+        subtitleLabel.maximumNumberOfLines = 1
+        subtitleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
 
         let symbolConfig = NSImage.SymbolConfiguration(pointSize: 9, weight: .bold)
         setupRemoveButton(symbolConfig: symbolConfig, symbolName: "xmark.circle.fill")
@@ -406,6 +452,7 @@ class ShelfGridItemView: BaseShelfItemView {
 
         addSubview(imageView)
         addSubview(label)
+        addSubview(subtitleLabel)
         addSubview(ungroupButton)
         addSubview(copyButton)
         addSubview(previewButton)
@@ -423,7 +470,11 @@ class ShelfGridItemView: BaseShelfItemView {
             label.topAnchor.constraint(equalTo: imageView.bottomAnchor, constant: 2),
             label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
             label.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
-            label.bottomAnchor.constraint(equalTo: bottomAnchor),
+
+            subtitleLabel.topAnchor.constraint(equalTo: label.bottomAnchor, constant: 1),
+            subtitleLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
+            subtitleLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
+            subtitleLabel.bottomAnchor.constraint(equalTo: bottomAnchor),
 
             removeButton.topAnchor.constraint(equalTo: imageView.topAnchor, constant: -4),
             removeButton.trailingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: 4),

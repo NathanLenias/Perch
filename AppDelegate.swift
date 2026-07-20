@@ -1,6 +1,11 @@
 import AppKit
 import ServiceManagement
 
+extension NSColor {
+    /// Perch's amber accent, adaptive light/dark (defined in Assets.xcassets).
+    static var perchAccent: NSColor { NSColor(named: "AccentAmber") ?? .controlAccentColor }
+}
+
 class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var statusItem: NSStatusItem!

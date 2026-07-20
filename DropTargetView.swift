@@ -18,7 +18,7 @@ class DropTargetView: NSVisualEffectView {
             return []
         }
         layer?.borderWidth = 2
-        layer?.borderColor = NSColor.controlAccentColor.withAlphaComponent(0.6).cgColor
+        layer?.borderColor = NSColor.perchAccent.withAlphaComponent(0.6).cgColor
         return .copy
     }
 

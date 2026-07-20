@@ -53,15 +53,24 @@ class ShelfViewController: NSViewController {
         setupToolbar()
         setupScrollView()
         setupEmptyState()
+        setupDragHints()
     }
 
     // MARK: - Layout
 
+    private let headerTitleLabel = NSTextField(labelWithString: String(localized: "shelf.title", defaultValue: "Perch"))
+    private let headerLogoView = NSImageView()
+
     private func setupHeader() {
-        let titleLabel = NSTextField(labelWithString: String(localized: "shelf.title", defaultValue: "Perch"))
-        titleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
-        titleLabel.textColor = .labelColor
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        let logoConfig = NSImage.SymbolConfiguration(pointSize: 12, weight: .semibold)
+        headerLogoView.image = NSImage(systemSymbolName: "bird.fill", accessibilityDescription: nil)?.withSymbolConfiguration(logoConfig)
+            ?? NSImage(named: "BirdPerch")
+        headerLogoView.contentTintColor = .perchAccent
+        headerLogoView.translatesAutoresizingMaskIntoConstraints = false
+
+        headerTitleLabel.font = .systemFont(ofSize: 13, weight: .bold)
+        headerTitleLabel.textColor = .labelColor
+        headerTitleLabel.translatesAutoresizingMaskIntoConstraints = false
 
         closeButton.bezelStyle = .accessoryBarAction
         closeButton.imagePosition = .imageOnly
@@ -73,45 +82,61 @@ class ShelfViewController: NSViewController {
         let symbolConfig = NSImage.SymbolConfiguration(pointSize: 10, weight: .semibold)
         closeButton.image = NSImage(systemSymbolName: "xmark", accessibilityDescription: String(localized: "a11y.hideShelf", defaultValue: "Hide shelf"))?.withSymbolConfiguration(symbolConfig)
 
-        contentView.addSubview(titleLabel)
+        contentView.addSubview(headerLogoView)
+        contentView.addSubview(headerTitleLabel)
         contentView.addSubview(closeButton)
         NSLayoutConstraint.activate([
-            titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 14),
-            titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            headerLogoView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 14),
+            headerLogoView.centerYAnchor.constraint(equalTo: headerTitleLabel.centerYAnchor),
+            headerLogoView.widthAnchor.constraint(equalToConstant: 16),
+            headerLogoView.heightAnchor.constraint(equalToConstant: 16),
 
-            closeButton.centerYAnchor.constraint(equalTo: titleLabel.centerYAnchor),
+            headerTitleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 14),
+            headerTitleLabel.leadingAnchor.constraint(equalTo: headerLogoView.trailingAnchor, constant: 6),
+
+            closeButton.centerYAnchor.constraint(equalTo: headerTitleLabel.centerYAnchor),
             closeButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
             closeButton.widthAnchor.constraint(equalToConstant: 18),
             closeButton.heightAnchor.constraint(equalToConstant: 18),
         ])
     }
 
-    private func setupToolbar() {
-        let symbolConfig = NSImage.SymbolConfiguration(pointSize: 12, weight: .medium)
+    private let viewToggle = NSSegmentedControl()
 
-        let gearButton = makeToolbarButton(
-            symbol: "gearshape", accessibilityLabel: String(localized: "a11y.settings", defaultValue: "Settings"),
-            config: symbolConfig, action: #selector(settingsTapped)
+    private func setupToolbar() {
+        let gearButton = makeFooterButton(
+            symbol: "gearshape",
+            title: String(localized: "toolbar.settings", defaultValue: "Settings"),
+            action: #selector(settingsTapped)
         )
-        let trashButton = makeToolbarButton(
-            symbol: "trash", accessibilityLabel: String(localized: "a11y.clearAll", defaultValue: "Clear Perch"),
-            config: symbolConfig, action: #selector(clearAll)
+        let trashButton = makeFooterButton(
+            symbol: "trash",
+            title: String(localized: "toolbar.clear", defaultValue: "Clear"),
+            action: #selector(clearAll)
         )
-        let viewToggleButton = makeToolbarButton(
-            symbol: "square.grid.2x2", accessibilityLabel: String(localized: "a11y.toggleView", defaultValue: "Toggle view"),
-            config: symbolConfig, action: #selector(toggleViewMode)
-        )
+
+        let symbolConfig = NSImage.SymbolConfiguration(pointSize: 11, weight: .medium)
+        viewToggle.segmentCount = 2
+        viewToggle.trackingMode = .selectOne
+        viewToggle.setImage(NSImage(systemSymbolName: "list.bullet", accessibilityDescription: String(localized: "a11y.toggleView", defaultValue: "Toggle view"))?.withSymbolConfiguration(symbolConfig), forSegment: 0)
+        viewToggle.setImage(NSImage(systemSymbolName: "square.grid.2x2", accessibilityDescription: String(localized: "a11y.toggleView", defaultValue: "Toggle view"))?.withSymbolConfiguration(symbolConfig), forSegment: 1)
+        viewToggle.selectedSegment = (viewMode == .list) ? 0 : 1
+        viewToggle.target = self
+        viewToggle.action = #selector(viewToggleChanged)
 
         toolbar.orientation = .horizontal
         toolbar.distribution = .equalSpacing
         toolbar.alignment = .centerY
-        toolbar.edgeInsets = NSEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
+        toolbar.edgeInsets = NSEdgeInsets(top: 0, left: 12, bottom: 0, right: 12)
         toolbar.translatesAutoresizingMaskIntoConstraints = false
         toolbar.isHidden = true
 
-        toolbar.addArrangedSubview(gearButton)
-        toolbar.addArrangedSubview(trashButton)
-        toolbar.addArrangedSubview(viewToggleButton)
+        let leftGroup = NSStackView(views: [gearButton, trashButton])
+        leftGroup.orientation = .horizontal
+        leftGroup.spacing = 10
+
+        toolbar.addArrangedSubview(leftGroup)
+        toolbar.addArrangedSubview(viewToggle)
 
         // Thin separator line above toolbar
         toolbarSeparator.boxType = .separator
@@ -128,23 +153,29 @@ class ShelfViewController: NSViewController {
             toolbar.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             toolbar.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             toolbar.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-            toolbar.heightAnchor.constraint(equalToConstant: 32),
+            toolbar.heightAnchor.constraint(equalToConstant: 44),
         ])
     }
 
-    private func makeToolbarButton(symbol: String, accessibilityLabel: String, config: NSImage.SymbolConfiguration, action: Selector) -> NSButton {
+    private func makeFooterButton(symbol: String, title: String, action: Selector) -> NSButton {
         let button = NSButton()
         button.bezelStyle = .accessoryBarAction
-        button.imagePosition = .imageOnly
         button.isBordered = false
+        button.imagePosition = .imageAbove
         button.contentTintColor = .secondaryLabelColor
-        button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: accessibilityLabel)?.withSymbolConfiguration(config)
-        button.toolTip = accessibilityLabel
+        let config = NSImage.SymbolConfiguration(pointSize: 11, weight: .medium)
+        button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: title)?.withSymbolConfiguration(config)
+        button.attributedTitle = NSAttributedString(
+            string: title,
+            attributes: [
+                .font: NSFont.systemFont(ofSize: 9),
+                .foregroundColor: NSColor.tertiaryLabelColor,
+            ]
+        )
+        button.toolTip = title
         button.target = self
         button.action = action
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.widthAnchor.constraint(equalToConstant: 24).isActive = true
-        button.heightAnchor.constraint(equalToConstant: 24).isActive = true
         return button
     }
 
@@ -307,6 +338,71 @@ class ShelfViewController: NSViewController {
         onHideRequested?()
     }
 
+    // MARK: - Drag-out guide mode
+
+    private let dragHintsView = NSStackView()
+
+    private func setupDragHints() {
+        let moveRow = makeHintRow(
+            symbol: "arrow.up.and.down.and.arrow.left.and.right",
+            text: String(localized: "dragout.move", defaultValue: "Drag to a folder to move"),
+            accented: false
+        )
+        let copyRow = makeHintRow(
+            symbol: "option",
+            text: String(localized: "dragout.copyHint", defaultValue: "Hold ⌥ to copy (the file stays in Perch)"),
+            accented: true
+        )
+
+        dragHintsView.orientation = .vertical
+        dragHintsView.alignment = .leading
+        dragHintsView.spacing = 8
+        dragHintsView.edgeInsets = NSEdgeInsets(top: 10, left: 12, bottom: 10, right: 12)
+        dragHintsView.translatesAutoresizingMaskIntoConstraints = false
+        dragHintsView.isHidden = true
+        dragHintsView.addArrangedSubview(moveRow)
+        dragHintsView.addArrangedSubview(copyRow)
+
+        contentView.addSubview(dragHintsView)
+        NSLayoutConstraint.activate([
+            dragHintsView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 8),
+            dragHintsView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -8),
+            dragHintsView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8),
+        ])
+    }
+
+    private func makeHintRow(symbol: String, text: String, accented: Bool) -> NSStackView {
+        let color: NSColor = accented ? .perchAccent : .secondaryLabelColor
+
+        let iconView = NSImageView()
+        let config = NSImage.SymbolConfiguration(pointSize: 11, weight: .medium)
+        iconView.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?.withSymbolConfiguration(config)
+        iconView.contentTintColor = color
+
+        let label = NSTextField(wrappingLabelWithString: text)
+        label.font = .systemFont(ofSize: 10.5)
+        label.textColor = color
+        label.isSelectable = false
+
+        let row = NSStackView(views: [iconView, label])
+        row.orientation = .horizontal
+        row.alignment = .top
+        row.spacing = 7
+        return row
+    }
+
+    /// Switches the shelf into "guide" mode while one of its items is being
+    /// dragged out: hints replace the footer and the header shows what's happening.
+    private func setDragOutMode(_ active: Bool) {
+        headerTitleLabel.stringValue = active
+            ? String(localized: "dragout.title", defaultValue: "Moving…")
+            : String(localized: "shelf.title", defaultValue: "Perch")
+        dragHintsView.isHidden = !active
+        let footerHidden = active || items.isEmpty
+        toolbar.isHidden = footerHidden
+        toolbarSeparator.isHidden = footerHidden
+    }
+
     // MARK: - Preview
 
     private var previewController: PreviewViewController?
@@ -371,8 +467,8 @@ class ShelfViewController: NSViewController {
         addItems(from: urls)
     }
 
-    @objc private func settingsTapped() {
-        guard let button = toolbar.arrangedSubviews.first as? NSButton else { return }
+    @objc private func settingsTapped(_ sender: NSButton) {
+        let button = sender
 
         let menu = NSMenu()
 
@@ -405,18 +501,9 @@ class ShelfViewController: NSViewController {
     }
 
 
-    @objc private func toggleViewMode() {
-        viewMode = (viewMode == .list) ? .grid : .list
-        updateViewToggleIcon()
+    @objc private func viewToggleChanged() {
+        viewMode = (viewToggle.selectedSegment == 0) ? .list : .grid
         rebuildItemViews()
-    }
-
-    private func updateViewToggleIcon() {
-        let symbolConfig = NSImage.SymbolConfiguration(pointSize: 12, weight: .medium)
-        let symbolName = (viewMode == .list) ? "square.grid.2x2" : "list.bullet"
-        if let button = toolbar.arrangedSubviews.last as? NSButton {
-            button.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: String(localized: "a11y.toggleView", defaultValue: "Toggle view"))?.withSymbolConfiguration(symbolConfig)
-        }
     }
 
     @objc func clearAll() {
@@ -442,6 +529,7 @@ class ShelfViewController: NSViewController {
             itemView.onUngroup = { [weak self] in self?.ungroupItem(item) }
             itemView.onCopy = { [weak self] in self?.copyToClipboard(urls: item.urls) }
             itemView.onPreview = { [weak self] in self?.showPreview(for: item) }
+            itemView.onDragSessionChanged = { [weak self] active in self?.setDragOutMode(active) }
             itemView.onDragCompleted = { [weak self] in self?.removeSelectedItems() }
             itemView.onMouseDown = { [weak self] cmd, shift in self?.handleMouseDown(item, command: cmd, shift: shift) }
             itemView.onMouseUp = { [weak self] dragged, cmd, shift in self?.handleMouseUp(item, wasDragged: dragged, command: cmd, shift: shift) }
