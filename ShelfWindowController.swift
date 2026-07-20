@@ -15,7 +15,8 @@ class ShelfWindowController: NSWindowController {
         window.isOpaque = false
         window.backgroundColor = .clear
         window.hasShadow = true
-        window.collectionBehavior = [.canJoinAllSpaces, .stationary]
+        // .fullScreenAuxiliary is required so the shelf can appear over full-screen apps
+        window.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
         window.isMovableByWindowBackground = false
         window.hidesOnDeactivate = false
 
@@ -49,11 +50,16 @@ class ShelfWindowController: NSWindowController {
 
     var isShelfVisible = false
 
+    /// Incremented on every show/hide so a stale hide animation's completion
+    /// handler can't order the window out after a newer show started.
+    private var animationGeneration = 0
+
     func showShelf() {
         guard !isShelfVisible else { return }
         guard let window = window else { return }
         let screen = currentScreen
         isShelfVisible = true
+        animationGeneration += 1
 
         window.setFrame(shelfFrame(for: screen, offScreen: true), display: false)
         window.alphaValue = 0
@@ -72,13 +78,17 @@ class ShelfWindowController: NSWindowController {
         guard let window = window else { return }
         let screen = currentScreen
         isShelfVisible = false
+        animationGeneration += 1
+        let generation = animationGeneration
 
         NSAnimationContext.runAnimationGroup({ ctx in
             ctx.duration = 0.2
             ctx.timingFunction = CAMediaTimingFunction(name: .easeIn)
             window.animator().setFrame(self.shelfFrame(for: screen, offScreen: true), display: true)
             window.animator().alphaValue = 0
-        }, completionHandler: {
+        }, completionHandler: { [weak self] in
+            // A newer show/hide started during this animation — don't touch the window
+            guard let self, generation == self.animationGeneration else { return }
             window.orderOut(nil)
             window.alphaValue = 1
         })
@@ -93,6 +103,25 @@ class ShelfWindowController: NSWindowController {
 // MARK: - ShelfPanel (non-activating panel)
 
 private class ShelfPanel: NSPanel {
-    override var canBecomeKey: Bool { false }
+    // Accepting key status lets the shelf receive Cmd+V/Cmd+C after a click;
+    // the .nonactivatingPanel style keeps the app from stealing activation.
+    override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        guard event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
+              let vc = contentViewController as? ShelfViewController else {
+            return super.performKeyEquivalent(with: event)
+        }
+        switch event.charactersIgnoringModifiers {
+        case "v":
+            vc.pasteFromClipboard()
+            return true
+        case "c":
+            vc.copySelection()
+            return true
+        default:
+            return super.performKeyEquivalent(with: event)
+        }
+    }
 }

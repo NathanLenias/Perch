@@ -6,6 +6,7 @@ class ShelfViewController: NSViewController {
     private let scrollView = NSScrollView()
     private let stackView = NSStackView()
     private let emptyLabel = NSTextField(labelWithString: String(localized: "drop.empty", defaultValue: "Drop files here"))
+    private let pasteHintLabel = NSTextField(labelWithString: String(localized: "drop.pasteHint", defaultValue: "or paste with ⌘V"))
     private let emptyImageView = NSImageView()
     private let closeButton = NSButton()
     private let toolbar = NSStackView()
@@ -184,8 +185,14 @@ class ShelfViewController: NSViewController {
         emptyLabel.alignment = .center
         emptyLabel.translatesAutoresizingMaskIntoConstraints = false
 
+        pasteHintLabel.font = .systemFont(ofSize: 11)
+        pasteHintLabel.textColor = .quaternaryLabelColor
+        pasteHintLabel.alignment = .center
+        pasteHintLabel.translatesAutoresizingMaskIntoConstraints = false
+
         contentView.addSubview(emptyImageView)
         contentView.addSubview(emptyLabel)
+        contentView.addSubview(pasteHintLabel)
         NSLayoutConstraint.activate([
             emptyImageView.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
             emptyImageView.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: 16),
@@ -194,6 +201,9 @@ class ShelfViewController: NSViewController {
 
             emptyLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
             emptyLabel.topAnchor.constraint(equalTo: emptyImageView.bottomAnchor, constant: 8),
+
+            pasteHintLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            pasteHintLabel.topAnchor.constraint(equalTo: emptyLabel.bottomAnchor, constant: 4),
         ])
     }
 
@@ -296,6 +306,33 @@ class ShelfViewController: NSViewController {
         onHideRequested?()
     }
 
+    // MARK: - Clipboard
+
+    func copyToClipboard(urls: [URL]) {
+        guard !urls.isEmpty else { return }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.writeObjects(urls as [NSURL])
+    }
+
+    /// Copies the current selection (all URLs of selected items) to the clipboard.
+    func copySelection() {
+        copyToClipboard(urls: selectedItems().flatMap { $0.urls })
+    }
+
+    /// Adds file URLs from the general pasteboard, same path as a drop.
+    func pasteFromClipboard() {
+        let urls = NSPasteboard.general.readObjects(
+            forClasses: [NSURL.self],
+            options: [.urlReadingFileURLsOnly: true]
+        ) as? [URL] ?? []
+        guard !urls.isEmpty else {
+            NSSound.beep()
+            return
+        }
+        addItems(from: urls)
+    }
+
     @objc private func settingsTapped() {
         guard let button = toolbar.arrangedSubviews.first as? NSButton else { return }
 
@@ -364,6 +401,7 @@ class ShelfViewController: NSViewController {
             itemView.isSelected = selectedURLs.contains(item.url)
             itemView.onRemove = { [weak self] in self?.removeItem(item) }
             itemView.onUngroup = { [weak self] in self?.ungroupItem(item) }
+            itemView.onCopy = { [weak self] in self?.copyToClipboard(urls: item.urls) }
             itemView.onDragCompleted = { [weak self] in self?.removeSelectedItems() }
             itemView.onMouseDown = { [weak self] cmd, shift in self?.handleMouseDown(item, command: cmd, shift: shift) }
             itemView.onMouseUp = { [weak self] dragged, cmd, shift in self?.handleMouseUp(item, wasDragged: dragged, command: cmd, shift: shift) }
@@ -377,6 +415,7 @@ class ShelfViewController: NSViewController {
         let empty = items.isEmpty
         emptyImageView.isHidden = !empty
         emptyLabel.isHidden = !empty
+        pasteHintLabel.isHidden = !empty
         toolbar.isHidden = empty
         toolbarSeparator.isHidden = empty
     }

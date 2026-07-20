@@ -13,6 +13,7 @@ class DragDetector {
     private var globalUpMonitor: Any?
     private var localUpMonitor: Any?
     private var hideTimer: Timer?
+    private var dragEndPollTimer: Timer?
 
     private let dragPasteboard = NSPasteboard(name: .drag)
     private var lastChangeCount: Int = 0
@@ -35,14 +36,18 @@ class DragDetector {
         if let m = globalUpMonitor { NSEvent.removeMonitor(m); globalUpMonitor = nil }
         if let m = localUpMonitor { NSEvent.removeMonitor(m); localUpMonitor = nil }
         hideTimer?.invalidate()
+        dragEndPollTimer?.invalidate()
     }
 
     // MARK: - Event Monitors
 
     private func startMonitors() {
         globalDragMonitor = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDragged) { [weak self] _ in
-            guard let self, !self.isActiveDrag else { return }
+            guard let self else { return }
 
+            // The change count is the source of truth: a new value means a new
+            // drag session, even if the previous session's mouseUp was never
+            // delivered (the system can swallow it), so don't gate on isActiveDrag.
             let currentCount = self.dragPasteboard.changeCount
             guard currentCount != self.lastChangeCount else { return }
             self.lastChangeCount = currentCount
@@ -52,6 +57,7 @@ class DragDetector {
 
             self.isActiveDrag = true
             self.hideTimer?.invalidate()
+            self.startDragEndPolling()
             self.delegate?.dragDetectorDidDetectDragStart()
         }
 
@@ -71,9 +77,30 @@ class DragDetector {
         lastChangeCount = dragPasteboard.changeCount
         guard isActiveDrag else { return }
         isActiveDrag = false
+        dragEndPollTimer?.invalidate()
         hideTimer?.invalidate()
         hideTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { [weak self] _ in
             self?.delegate?.dragDetectorDidDetectDragEnd()
+        }
+    }
+
+    // MARK: - Drag End Polling (safety net)
+
+    /// Event monitors can miss the mouseUp that ends a drag session, which used
+    /// to leave the detector stuck. While a drag is active, poll the physical
+    /// button state so a missed mouseUp still ends the session.
+    private func startDragEndPolling() {
+        dragEndPollTimer?.invalidate()
+        dragEndPollTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            guard self.isActiveDrag else {
+                self.dragEndPollTimer?.invalidate()
+                return
+            }
+            // Bit 0 = left button. If it's up, the drag is over.
+            if NSEvent.pressedMouseButtons & 0x1 == 0 {
+                self.handleMouseUp()
+            }
         }
     }
 }
