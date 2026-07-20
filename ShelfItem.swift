@@ -8,15 +8,26 @@ class ShelfItem {
     let icon: NSImage
     let thumbnail: NSImage
 
+    /// Short description shown under the name: "PDF · 248 KB" for files,
+    /// "Group · PDF, PNG" for stacks.
+    let subtitle: String
+
     var isGroup: Bool { urls.count > 1 }
     var url: URL { urls[0] }
     var fileCount: Int { urls.count }
+
+    /// Page count for PDFs, nil for everything else. Loaded on first access.
+    lazy var pageCount: Int? = {
+        guard UTType(filenameExtension: url.pathExtension)?.conforms(to: .pdf) == true else { return nil }
+        return PDFDocument(url: url)?.pageCount
+    }()
 
     private static let thumbnailSize = NSSize(width: 160, height: 160)
 
     init(url: URL) {
         self.urls = [url]
         self.name = url.lastPathComponent
+        self.subtitle = Self.fileSubtitle(for: url)
         self.icon = NSWorkspace.shared.icon(forFile: url.path(percentEncoded: false))
         self.icon.size = NSSize(width: 32, height: 32)
         self.thumbnail = Self.generateThumbnail(for: url)
@@ -26,6 +37,7 @@ class ShelfItem {
         precondition(urls.count >= 2)
         self.urls = urls
         self.name = String(localized: "group.fileCount \(urls.count)")
+        self.subtitle = Self.groupSubtitle(for: urls)
 
         // Composite stacked icon from up to 3 first files
         let stackIcons = urls.prefix(3).map { url -> NSImage in
@@ -42,6 +54,42 @@ class ShelfItem {
             return icon
         }
         self.thumbnail = Self.compositeStackedIcon(from: thumbIcons, size: Self.thumbnailSize)
+    }
+
+    // MARK: - Subtitles
+
+    private static func fileSubtitle(for url: URL) -> String {
+        let values = try? url.resourceValues(forKeys: [.fileSizeKey, .isDirectoryKey])
+        let isDirectory = values?.isDirectory ?? false
+
+        var parts: [String] = []
+        if let label = typeLabel(for: url, isDirectory: isDirectory) {
+            parts.append(label)
+        }
+        if !isDirectory, let size = values?.fileSize {
+            parts.append(ByteCountFormatter.string(fromByteCount: Int64(size), countStyle: .file))
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    private static func groupSubtitle(for urls: [URL]) -> String {
+        let label = String(localized: "group.label", defaultValue: "Group")
+        var seen = Set<String>()
+        let types = urls.compactMap { url -> String? in
+            let ext = url.pathExtension.uppercased()
+            guard !ext.isEmpty, !seen.contains(ext) else { return nil }
+            seen.insert(ext)
+            return ext
+        }
+        guard !types.isEmpty else { return label }
+        return "\(label) · \(types.prefix(3).joined(separator: ", "))"
+    }
+
+    private static func typeLabel(for url: URL, isDirectory: Bool) -> String? {
+        let ext = url.pathExtension
+        if !ext.isEmpty { return ext.uppercased() }
+        if isDirectory { return String(localized: "item.folder", defaultValue: "Folder") }
+        return UTType(filenameExtension: ext)?.localizedDescription
     }
 
     // MARK: - Stacked icon compositing

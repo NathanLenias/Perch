@@ -8,10 +8,12 @@ class BaseShelfItemView: NSView, NSDraggingSource {
     let removeButton = NSButton()
     let ungroupButton = NSButton()
     let copyButton = NSButton()
+    let previewButton = NSButton()
 
     var onRemove: (() -> Void)?
     var onUngroup: (() -> Void)?
     var onCopy: (() -> Void)?
+    var onPreview: (() -> Void)?
     var onDragCompleted: (() -> Void)?
     var onMouseDown: ((_ command: Bool, _ shift: Bool) -> Void)?
     var onMouseUp: ((_ wasDragged: Bool, _ command: Bool, _ shift: Bool) -> Void)?
@@ -70,6 +72,19 @@ class BaseShelfItemView: NSView, NSDraggingSource {
         copyButton.toolTip = String(localized: "a11y.copy", defaultValue: "Copy")
     }
 
+    func setupPreviewButton(symbolConfig: NSImage.SymbolConfiguration) {
+        previewButton.bezelStyle = .accessoryBarAction
+        previewButton.imagePosition = .imageOnly
+        previewButton.isBordered = false
+        previewButton.contentTintColor = .tertiaryLabelColor
+        previewButton.target = self
+        previewButton.action = #selector(previewTapped)
+        previewButton.translatesAutoresizingMaskIntoConstraints = false
+        previewButton.isHidden = true
+        previewButton.image = NSImage(systemSymbolName: "eye", accessibilityDescription: String(localized: "a11y.preview", defaultValue: "Preview"))?.withSymbolConfiguration(symbolConfig)
+        previewButton.toolTip = String(localized: "a11y.preview", defaultValue: "Preview")
+    }
+
     func setupUngroupButton(symbolConfig: NSImage.SymbolConfiguration) {
         ungroupButton.bezelStyle = .accessoryBarAction
         ungroupButton.imagePosition = .imageOnly
@@ -99,7 +114,11 @@ class BaseShelfItemView: NSView, NSDraggingSource {
     override func mouseEntered(with event: NSEvent) {
         removeButton.isHidden = false
         copyButton.isHidden = false
-        if item.isGroup { ungroupButton.isHidden = false }
+        if item.isGroup {
+            ungroupButton.isHidden = false
+        } else {
+            previewButton.isHidden = false
+        }
         mouseEnteredExtra()
     }
 
@@ -107,6 +126,7 @@ class BaseShelfItemView: NSView, NSDraggingSource {
         removeButton.isHidden = true
         copyButton.isHidden = true
         ungroupButton.isHidden = true
+        previewButton.isHidden = true
         mouseExitedExtra()
     }
 
@@ -148,6 +168,9 @@ class BaseShelfItemView: NSView, NSDraggingSource {
 
     override func mouseUp(with event: NSEvent) {
         onMouseUp?(didDrag, mouseDownModifiers.contains(.command), mouseDownModifiers.contains(.shift))
+        if event.clickCount == 2 && !didDrag && !item.isGroup {
+            onPreview?()
+        }
     }
 
     // MARK: - NSDraggingSource
@@ -183,6 +206,10 @@ class BaseShelfItemView: NSView, NSDraggingSource {
     @objc private func copyTapped() {
         onCopy?()
         showCopyFeedback()
+    }
+
+    @objc private func previewTapped() {
+        onPreview?()
     }
 
     /// Swap the copy icon for a checkmark briefly so the action feels acknowledged.
@@ -247,15 +274,18 @@ class ShelfItemView: BaseShelfItemView {
         setupRemoveButton(symbolConfig: symbolConfig)
         setupUngroupButton(symbolConfig: symbolConfig)
         setupCopyButton(symbolConfig: symbolConfig)
+        setupPreviewButton(symbolConfig: symbolConfig)
 
         addSubview(iconView)
         addSubview(label)
         addSubview(ungroupButton)
         addSubview(copyButton)
+        addSubview(previewButton)
         addSubview(removeButton)
 
-        // Hover actions, from the right: × | (split) | copy
+        // Hover actions, from the right: × | split (groups) or eye (singles) | copy
         let copyNeighbor = item.isGroup ? ungroupButton : removeButton
+        let labelNeighbor = item.isGroup ? copyButton : previewButton
 
         NSLayoutConstraint.activate([
             heightAnchor.constraint(equalToConstant: 36),
@@ -267,7 +297,7 @@ class ShelfItemView: BaseShelfItemView {
 
             label.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 8),
             label.centerYAnchor.constraint(equalTo: centerYAnchor),
-            label.trailingAnchor.constraint(lessThanOrEqualTo: copyButton.leadingAnchor, constant: -4),
+            label.trailingAnchor.constraint(lessThanOrEqualTo: labelNeighbor.leadingAnchor, constant: -4),
 
             removeButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
             removeButton.centerYAnchor.constraint(equalTo: centerYAnchor),
@@ -283,6 +313,11 @@ class ShelfItemView: BaseShelfItemView {
             copyButton.centerYAnchor.constraint(equalTo: centerYAnchor),
             copyButton.widthAnchor.constraint(equalToConstant: 16),
             copyButton.heightAnchor.constraint(equalToConstant: 16),
+
+            previewButton.trailingAnchor.constraint(equalTo: copyButton.leadingAnchor, constant: -4),
+            previewButton.centerYAnchor.constraint(equalTo: centerYAnchor),
+            previewButton.widthAnchor.constraint(equalToConstant: 16),
+            previewButton.heightAnchor.constraint(equalToConstant: 16),
         ])
     }
 
@@ -367,15 +402,17 @@ class ShelfGridItemView: BaseShelfItemView {
         setupRemoveButton(symbolConfig: symbolConfig, symbolName: "xmark.circle.fill")
         setupUngroupButton(symbolConfig: symbolConfig)
         setupCopyButton(symbolConfig: symbolConfig)
+        setupPreviewButton(symbolConfig: symbolConfig)
 
         addSubview(imageView)
         addSubview(label)
         addSubview(ungroupButton)
         addSubview(copyButton)
+        addSubview(previewButton)
         addSubview(removeButton)
 
-        // Hover actions stack below the × : (split for groups), then copy
-        let copyTopNeighbor = item.isGroup ? ungroupButton : removeButton
+        // Hover actions stack below the × : split (groups) or eye (singles), then copy
+        let copyTopNeighbor = item.isGroup ? ungroupButton : previewButton
 
         NSLayoutConstraint.activate([
             imageView.topAnchor.constraint(equalTo: topAnchor, constant: 2),
@@ -397,6 +434,11 @@ class ShelfGridItemView: BaseShelfItemView {
             ungroupButton.trailingAnchor.constraint(equalTo: removeButton.trailingAnchor),
             ungroupButton.widthAnchor.constraint(equalToConstant: 16),
             ungroupButton.heightAnchor.constraint(equalToConstant: 16),
+
+            previewButton.topAnchor.constraint(equalTo: removeButton.bottomAnchor, constant: 2),
+            previewButton.trailingAnchor.constraint(equalTo: removeButton.trailingAnchor),
+            previewButton.widthAnchor.constraint(equalToConstant: 16),
+            previewButton.heightAnchor.constraint(equalToConstant: 16),
 
             copyButton.topAnchor.constraint(equalTo: copyTopNeighbor.bottomAnchor, constant: 2),
             copyButton.trailingAnchor.constraint(equalTo: removeButton.trailingAnchor),

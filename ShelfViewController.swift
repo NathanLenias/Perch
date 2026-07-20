@@ -229,6 +229,7 @@ class ShelfViewController: NSViewController {
     var onHideRequested: (() -> Void)?
 
     func removeItem(_ item: ShelfItem) {
+        if previewController?.item === item { dismissPreview() }
         items.removeAll { $0 === item }
         for url in item.urls { selectedURLs.remove(url) }
         rebuildItemViews()
@@ -304,6 +305,43 @@ class ShelfViewController: NSViewController {
 
     @objc private func hideShelf() {
         onHideRequested?()
+    }
+
+    // MARK: - Preview
+
+    private var previewController: PreviewViewController?
+
+    /// Pushes the in-panel preview over the list (single items only).
+    func showPreview(for item: ShelfItem) {
+        guard !item.isGroup, previewController == nil else { return }
+
+        let pvc = PreviewViewController(item: item)
+        pvc.onBack = { [weak self] in self?.dismissPreview() }
+        pvc.onCopy = { [weak self] in self?.copyToClipboard(urls: item.urls) }
+
+        addChild(pvc)
+        pvc.view.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(pvc.view)
+        NSLayoutConstraint.activate([
+            pvc.view.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 40),
+            pvc.view.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            pvc.view.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            pvc.view.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+        ])
+
+        scrollView.isHidden = true
+        toolbar.isHidden = true
+        toolbarSeparator.isHidden = true
+        previewController = pvc
+    }
+
+    func dismissPreview() {
+        guard let pvc = previewController else { return }
+        pvc.view.removeFromSuperview()
+        pvc.removeFromParent()
+        previewController = nil
+        scrollView.isHidden = false
+        updateEmptyState()
     }
 
     // MARK: - Clipboard
@@ -382,6 +420,7 @@ class ShelfViewController: NSViewController {
     }
 
     @objc func clearAll() {
+        dismissPreview()
         items.removeAll()
         rebuildItemViews()
         updateEmptyState()
@@ -402,6 +441,7 @@ class ShelfViewController: NSViewController {
             itemView.onRemove = { [weak self] in self?.removeItem(item) }
             itemView.onUngroup = { [weak self] in self?.ungroupItem(item) }
             itemView.onCopy = { [weak self] in self?.copyToClipboard(urls: item.urls) }
+            itemView.onPreview = { [weak self] in self?.showPreview(for: item) }
             itemView.onDragCompleted = { [weak self] in self?.removeSelectedItems() }
             itemView.onMouseDown = { [weak self] cmd, shift in self?.handleMouseDown(item, command: cmd, shift: shift) }
             itemView.onMouseUp = { [weak self] dragged, cmd, shift in self?.handleMouseUp(item, wasDragged: dragged, command: cmd, shift: shift) }
