@@ -4,9 +4,13 @@ import PDFKit
 import QuickLookThumbnailing
 
 class ShelfItem {
-    let urls: [URL]
-    let name: String
+    private(set) var urls: [URL]
+    private(set) var name: String
     let icon: NSImage
+
+    /// File bookmarks captured at drop time (Finder-alias mechanism); they
+    /// keep resolving after the file is moved or renamed on the same volume.
+    private let bookmarks: [Data?]
 
     /// Starts as the file icon (instant), then swaps to the real Quick Look
     /// thumbnail once the system generates it off the main thread.
@@ -39,6 +43,7 @@ class ShelfItem {
     init(url: URL) {
         self.urls = [url]
         self.name = url.lastPathComponent
+        self.bookmarks = [try? url.bookmarkData()]
         self.subtitle = Self.fileSubtitle(for: url)
         self.icon = NSWorkspace.shared.icon(forFile: url.path(percentEncoded: false))
         self.icon.size = NSSize(width: 48, height: 48)
@@ -74,6 +79,7 @@ class ShelfItem {
         precondition(urls.count >= 2)
         self.urls = urls
         self.name = String(localized: "group.fileCount \(urls.count)")
+        self.bookmarks = urls.map { try? $0.bookmarkData() }
         self.subtitle = Self.groupSubtitle(for: urls)
 
         // Composite stacked icon from up to 3 first files
@@ -91,6 +97,26 @@ class ShelfItem {
             return icon
         }
         self.thumbnail = Self.compositeStackedIcon(from: thumbIcons, size: Self.thumbnailSize)
+    }
+
+    // MARK: - Moved file tracking
+
+    var fileExists: Bool {
+        FileManager.default.fileExists(atPath: url.path(percentEncoded: false))
+    }
+
+    /// Re-resolves any file that is no longer at its recorded path through its
+    /// bookmark, so a moved or renamed file keeps being reachable from the shelf.
+    func refreshMovedFiles() {
+        for (index, url) in urls.enumerated() {
+            guard !FileManager.default.fileExists(atPath: url.path(percentEncoded: false)),
+                  let data = bookmarks[index] else { continue }
+            var isStale = false
+            guard let resolved = try? URL(resolvingBookmarkData: data, bookmarkDataIsStale: &isStale),
+                  FileManager.default.fileExists(atPath: resolved.path(percentEncoded: false)) else { continue }
+            urls[index] = resolved
+        }
+        if !isGroup { name = url.lastPathComponent }
     }
 
     // MARK: - Subtitles

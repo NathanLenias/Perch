@@ -1,5 +1,12 @@
 import AppKit
 
+/// The hover pill must accept the first click on a non-key window; a plain
+/// stack view refuses it, so the initial click would only focus the panel
+/// and swallow the drag gesture starting on the pill's background.
+private final class FirstMouseStackView: NSStackView {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+}
+
 // MARK: - Base class for shared drag, hover, and selection behavior
 
 class BaseShelfItemView: NSView, NSDraggingSource {
@@ -11,7 +18,7 @@ class BaseShelfItemView: NSView, NSDraggingSource {
     let expandButton = NSButton()
     let lockButton = NSButton()
     let lockIndicator = NSImageView()
-    let hoverPill = NSStackView()
+    let hoverPill: NSStackView = FirstMouseStackView()
 
     var onRemove: (() -> Void)?
     var onUngroup: (() -> Void)?

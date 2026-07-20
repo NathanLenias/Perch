@@ -286,15 +286,17 @@ class ShelfViewController: NSViewController {
         rebuildItemViews()
     }
 
-    /// Removes the dragged-out items. Locked items stay in the shelf —
-    /// unless their file no longer exists (it was actually moved away),
-    /// in which case keeping them would leave a dead entry.
+    /// Removes the dragged-out items. Locked items stay in the shelf: if
+    /// their file was actually moved away, the bookmark re-resolves it to
+    /// its new location; the item is only dropped when even the bookmark
+    /// can't find the file anymore (deleted, or moved across volumes).
     private func removeSelectedItems() {
         let toRemove = selectedURLs
         items.removeAll { item in
             guard toRemove.contains(item.url) else { return false }
             if item.isLocked {
-                return !FileManager.default.fileExists(atPath: item.url.path(percentEncoded: false))
+                item.refreshMovedFiles()
+                return !item.fileExists
             }
             return true
         }
