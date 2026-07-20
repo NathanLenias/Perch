@@ -1,9 +1,10 @@
 import AppKit
 
-/// The hover pill must accept the first click on a non-key window; a plain
-/// stack view refuses it, so the initial click would only focus the panel
-/// and swallow the drag gesture starting on the pill's background.
-private final class FirstMouseStackView: NSStackView {
+/// Containers in the click path must accept the first click on a non-key
+/// window; a plain stack view refuses it, so the initial click would only
+/// focus the panel and swallow the drag gesture. Used for the hover pill,
+/// the text column of list rows, and grid rows.
+final class FirstMouseStackView: NSStackView {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
 
@@ -201,6 +202,9 @@ class BaseShelfItemView: NSView, NSDraggingSource {
         didDrag = true
 
         let itemsToDrag = draggedItems?() ?? [item]
+        // Hand out current locations: a locked file may have been moved
+        // outside of Perch since it was dropped here
+        itemsToDrag.forEach { $0.refreshMovedFiles() }
         var draggingItems: [NSDraggingItem] = []
 
         let dragSize = NSSize(width: 64, height: 64)
@@ -332,7 +336,7 @@ class ShelfItemView: BaseShelfItemView {
         subtitleLabel.lineBreakMode = .byTruncatingTail
         subtitleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
-        let textStack = NSStackView(views: [nameLabel, subtitleLabel])
+        let textStack = FirstMouseStackView(views: [nameLabel, subtitleLabel])
         textStack.orientation = .vertical
         textStack.alignment = .leading
         textStack.spacing = 1

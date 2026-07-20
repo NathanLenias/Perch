@@ -608,7 +608,7 @@ class ShelfViewController: NSViewController {
             // Grid: rows of two equal-width cards
             for start in stride(from: 0, to: items.count, by: 2) {
                 let pair = Array(items[start..<min(start + 2, items.count)])
-                let row = NSStackView()
+                let row = FirstMouseStackView()
                 row.orientation = .horizontal
                 row.distribution = .fillEqually
                 row.spacing = 8

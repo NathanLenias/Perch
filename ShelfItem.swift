@@ -10,7 +10,9 @@ class ShelfItem {
 
     /// File bookmarks captured at drop time (Finder-alias mechanism); they
     /// keep resolving after the file is moved or renamed on the same volume.
-    private let bookmarks: [Data?]
+    /// Regenerated after each resolution — stale bookmark data may not
+    /// survive a second move.
+    private var bookmarks: [Data?]
 
     /// Starts as the file icon (instant), then swaps to the real Quick Look
     /// thumbnail once the system generates it off the main thread.
@@ -107,6 +109,8 @@ class ShelfItem {
 
     /// Re-resolves any file that is no longer at its recorded path through its
     /// bookmark, so a moved or renamed file keeps being reachable from the shelf.
+    /// Called right before a drag starts and after a drag-out, so the shelf
+    /// always hands out the file's current location.
     func refreshMovedFiles() {
         for (index, url) in urls.enumerated() {
             guard !FileManager.default.fileExists(atPath: url.path(percentEncoded: false)),
@@ -115,6 +119,7 @@ class ShelfItem {
             guard let resolved = try? URL(resolvingBookmarkData: data, bookmarkDataIsStale: &isStale),
                   FileManager.default.fileExists(atPath: resolved.path(percentEncoded: false)) else { continue }
             urls[index] = resolved
+            bookmarks[index] = try? resolved.bookmarkData()
         }
         if !isGroup { name = url.lastPathComponent }
     }
