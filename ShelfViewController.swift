@@ -134,13 +134,13 @@ class ShelfViewController: NSViewController {
         toolbar.orientation = .horizontal
         toolbar.distribution = .equalSpacing
         toolbar.alignment = .centerY
-        toolbar.edgeInsets = NSEdgeInsets(top: 0, left: 12, bottom: 0, right: 12)
+        toolbar.edgeInsets = NSEdgeInsets(top: 0, left: 18, bottom: 0, right: 16)
         toolbar.translatesAutoresizingMaskIntoConstraints = false
         toolbar.isHidden = true
 
         let leftGroup = NSStackView(views: [gearButton, trashButton])
         leftGroup.orientation = .horizontal
-        leftGroup.spacing = 10
+        leftGroup.spacing = 22
 
         toolbar.addArrangedSubview(leftGroup)
         toolbar.addArrangedSubview(viewToggle)
@@ -160,7 +160,7 @@ class ShelfViewController: NSViewController {
             toolbar.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             toolbar.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             toolbar.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-            toolbar.heightAnchor.constraint(equalToConstant: 58),
+            toolbar.heightAnchor.constraint(equalToConstant: 64),
         ])
     }
 
@@ -170,12 +170,12 @@ class ShelfViewController: NSViewController {
         button.isBordered = false
         button.imagePosition = .imageAbove
         button.contentTintColor = .secondaryLabelColor
-        let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .medium)
+        let config = NSImage.SymbolConfiguration(pointSize: 17, weight: .medium)
         button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: title)?.withSymbolConfiguration(config)
         button.attributedTitle = NSAttributedString(
             string: title,
             attributes: [
-                .font: NSFont.systemFont(ofSize: 11),
+                .font: NSFont.systemFont(ofSize: 12),
                 .foregroundColor: NSColor.tertiaryLabelColor,
             ]
         )
@@ -615,8 +615,8 @@ class ShelfViewController: NSViewController {
         itemView.isSelected = selectedURLs.contains(item.url)
         itemView.onRemove = { [weak self] in self?.removeItem(item) }
         itemView.onUngroup = { [weak self] in self?.ungroupItem(item) }
-        itemView.onCopy = { [weak self] in self?.copyToClipboard(urls: item.urls) }
         itemView.onPreview = { [weak self] in self?.showPreview(for: item) }
+        itemView.onExpandPreview = { [weak self] in self?.openQuickLookPanel(for: item) }
         itemView.onDragSessionChanged = { [weak self] active in self?.setDragOutMode(active) }
         itemView.onDragCompleted = { [weak self] in self?.removeSelectedItems() }
         itemView.onMouseDown = { [weak self] cmd, shift in self?.handleMouseDown(item, command: cmd, shift: shift) }

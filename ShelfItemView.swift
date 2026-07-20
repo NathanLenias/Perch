@@ -7,14 +7,15 @@ class BaseShelfItemView: NSView, NSDraggingSource {
     let item: ShelfItem
     let removeButton = NSButton()
     let ungroupButton = NSButton()
-    let copyButton = NSButton()
     let previewButton = NSButton()
+    let expandButton = NSButton()
     let hoverPill = NSStackView()
 
     var onRemove: (() -> Void)?
     var onUngroup: (() -> Void)?
-    var onCopy: (() -> Void)?
     var onPreview: (() -> Void)?
+    /// Opens the system Quick Look panel directly from the item.
+    var onExpandPreview: (() -> Void)?
     /// Called with true when a drag-out session starts, false when it ends.
     var onDragSessionChanged: ((Bool) -> Void)?
     var onDragCompleted: (() -> Void)?
@@ -61,16 +62,16 @@ class BaseShelfItemView: NSView, NSDraggingSource {
         removeButton.toolTip = String(localized: "a11y.remove", defaultValue: "Remove item")
     }
 
-    func setupCopyButton(symbolConfig: NSImage.SymbolConfiguration) {
-        copyButton.bezelStyle = .accessoryBarAction
-        copyButton.imagePosition = .imageOnly
-        copyButton.isBordered = false
-        copyButton.contentTintColor = .perchAccent
-        copyButton.target = self
-        copyButton.action = #selector(copyTapped)
-        copyButton.translatesAutoresizingMaskIntoConstraints = false
-        copyButton.image = NSImage(systemSymbolName: "doc.on.doc", accessibilityDescription: String(localized: "a11y.copy", defaultValue: "Copy"))?.withSymbolConfiguration(symbolConfig)
-        copyButton.toolTip = String(localized: "a11y.copy", defaultValue: "Copy")
+    func setupExpandButton(symbolConfig: NSImage.SymbolConfiguration) {
+        expandButton.bezelStyle = .accessoryBarAction
+        expandButton.imagePosition = .imageOnly
+        expandButton.isBordered = false
+        expandButton.contentTintColor = .perchAccent
+        expandButton.target = self
+        expandButton.action = #selector(expandTapped)
+        expandButton.translatesAutoresizingMaskIntoConstraints = false
+        expandButton.image = NSImage(systemSymbolName: "arrow.up.left.and.arrow.down.right", accessibilityDescription: String(localized: "preview.expand", defaultValue: "Open full preview"))?.withSymbolConfiguration(symbolConfig)
+        expandButton.toolTip = String(localized: "preview.expand", defaultValue: "Open full preview")
     }
 
     func setupPreviewButton(symbolConfig: NSImage.SymbolConfiguration) {
@@ -223,25 +224,12 @@ class BaseShelfItemView: NSView, NSDraggingSource {
         onUngroup?()
     }
 
-    @objc private func copyTapped() {
-        onCopy?()
-        showCopyFeedback()
-    }
-
     @objc private func previewTapped() {
         onPreview?()
     }
 
-    /// Swap the copy icon for a checkmark briefly so the action feels acknowledged.
-    private func showCopyFeedback() {
-        let original = copyButton.image
-        let config = NSImage.SymbolConfiguration(pointSize: 12, weight: .semibold)
-        copyButton.image = NSImage(systemSymbolName: "checkmark", accessibilityDescription: nil)?.withSymbolConfiguration(config)
-        copyButton.contentTintColor = .systemGreen
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
-            self?.copyButton.image = original
-            self?.copyButton.contentTintColor = .perchAccent
-        }
+    @objc private func expandTapped() {
+        onExpandPreview?()
     }
 }
 
@@ -315,17 +303,17 @@ class ShelfItemView: BaseShelfItemView {
         let symbolConfig = NSImage.SymbolConfiguration(pointSize: 12, weight: .semibold)
         setupRemoveButton(symbolConfig: symbolConfig)
         setupUngroupButton(symbolConfig: symbolConfig)
-        setupCopyButton(symbolConfig: symbolConfig)
+        setupExpandButton(symbolConfig: symbolConfig)
         setupPreviewButton(symbolConfig: symbolConfig)
 
         addSubview(iconView)
         addSubview(textStack)
         addSubview(countBadge)
 
-        // Hover pill, from the left: eye (singles) or split (groups) | copy | ×
+        // Hover pill: eye + Quick Look for singles, split for groups, then ×
         let actionButtons = item.isGroup
-            ? [copyButton, ungroupButton, removeButton]
-            : [previewButton, copyButton, removeButton]
+            ? [ungroupButton, removeButton]
+            : [previewButton, expandButton, removeButton]
         setupHoverPill(with: actionButtons)
 
         NSLayoutConstraint.activate([
@@ -443,7 +431,7 @@ class ShelfGridItemView: BaseShelfItemView {
         let symbolConfig = NSImage.SymbolConfiguration(pointSize: 12, weight: .semibold)
         setupRemoveButton(symbolConfig: symbolConfig)
         setupUngroupButton(symbolConfig: symbolConfig)
-        setupCopyButton(symbolConfig: symbolConfig)
+        setupExpandButton(symbolConfig: symbolConfig)
         setupPreviewButton(symbolConfig: symbolConfig)
 
         addSubview(imageView)
@@ -452,8 +440,8 @@ class ShelfGridItemView: BaseShelfItemView {
 
         // Hover pill floating over the top of the thumbnail
         let actionButtons = item.isGroup
-            ? [copyButton, ungroupButton, removeButton]
-            : [previewButton, copyButton, removeButton]
+            ? [ungroupButton, removeButton]
+            : [previewButton, expandButton, removeButton]
         setupHoverPill(with: actionButtons)
 
         NSLayoutConstraint.activate([
