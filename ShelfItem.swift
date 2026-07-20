@@ -1,12 +1,20 @@
 import AppKit
 import UniformTypeIdentifiers
 import PDFKit
+import QuickLookThumbnailing
 
 class ShelfItem {
     let urls: [URL]
     let name: String
     let icon: NSImage
-    let thumbnail: NSImage
+
+    /// Starts as the file icon (instant), then swaps to the real Quick Look
+    /// thumbnail once the system generates it off the main thread.
+    private(set) var thumbnail: NSImage
+
+    /// Called on the main thread when the async thumbnail arrives, so the
+    /// currently displayed view can refresh its image.
+    var onThumbnailUpdated: ((NSImage) -> Void)?
 
     /// Short description shown under the name: "PDF · 248 KB" for files,
     /// "Group · PDF, PNG" for stacks.
@@ -30,7 +38,32 @@ class ShelfItem {
         self.subtitle = Self.fileSubtitle(for: url)
         self.icon = NSWorkspace.shared.icon(forFile: url.path(percentEncoded: false))
         self.icon.size = NSSize(width: 48, height: 48)
-        self.thumbnail = Self.generateThumbnail(for: url)
+
+        // Instant placeholder; the real thumbnail arrives asynchronously
+        let placeholder = NSWorkspace.shared.icon(forFile: url.path(percentEncoded: false))
+        placeholder.size = Self.thumbnailSize
+        self.thumbnail = placeholder
+        generateThumbnailAsync(for: url)
+    }
+
+    /// Asks Quick Look for a thumbnail off the main thread. For big photos
+    /// (RAW…) this uses the embedded preview instead of decoding the full
+    /// image, so dropping a file never blocks the UI.
+    private func generateThumbnailAsync(for url: URL) {
+        let request = QLThumbnailGenerator.Request(
+            fileAt: url,
+            size: Self.thumbnailSize,
+            scale: NSScreen.main?.backingScaleFactor ?? 2,
+            representationTypes: .thumbnail
+        )
+        QLThumbnailGenerator.shared.generateBestRepresentation(for: request) { [weak self] representation, _ in
+            guard let self, let cgImage = representation?.cgImage else { return }
+            let image = NSImage(cgImage: cgImage, size: .zero)
+            DispatchQueue.main.async {
+                self.thumbnail = image
+                self.onThumbnailUpdated?(image)
+            }
+        }
     }
 
     init(urls: [URL]) {
@@ -123,40 +156,4 @@ class ShelfItem {
         }
     }
 
-    // MARK: - Single-file thumbnail
-
-    private static let maxThumbnailFileSize: Int = 50_000_000 // 50 MB
-
-    private static func generateThumbnail(for url: URL) -> NSImage {
-        let type = UTType(filenameExtension: url.pathExtension)
-        let fileSize = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0
-
-        if type?.conforms(to: .image) == true, fileSize < maxThumbnailFileSize,
-           let image = NSImage(contentsOf: url) {
-            return resize(image, to: thumbnailSize)
-        }
-
-        if type?.conforms(to: .pdf) == true, fileSize < maxThumbnailFileSize,
-           let page = PDFDocument(url: url)?.page(at: 0) {
-            let pageImage = page.thumbnail(of: thumbnailSize, for: .mediaBox)
-            return pageImage
-        }
-
-        // Fallback: system icon
-        let icon = NSWorkspace.shared.icon(forFile: url.path(percentEncoded: false))
-        icon.size = thumbnailSize
-        return icon
-    }
-
-    private static func resize(_ image: NSImage, to targetSize: NSSize) -> NSImage {
-        let original = image.size
-        let scale = min(targetSize.width / original.width, targetSize.height / original.height)
-        let newSize = NSSize(width: original.width * scale, height: original.height * scale)
-
-        return NSImage(size: newSize, flipped: false) { rect in
-            image.draw(in: rect, from: NSRect(origin: .zero, size: original),
-                       operation: .copy, fraction: 1.0)
-            return true
-        }
-    }
 }

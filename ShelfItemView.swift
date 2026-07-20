@@ -265,6 +265,9 @@ class ShelfItemView: BaseShelfItemView {
 
     private func setupViews() {
         iconView.image = item.isGroup ? item.icon : item.thumbnail
+        if !item.isGroup {
+            item.onThumbnailUpdated = { [weak self] image in self?.iconView.image = image }
+        }
         iconView.imageScaling = .scaleProportionallyUpOrDown
         iconView.translatesAutoresizingMaskIntoConstraints = false
         iconView.wantsLayer = true
@@ -402,6 +405,9 @@ class ShelfGridItemView: BaseShelfItemView {
 
     private func setupViews() {
         let imageView = NSImageView(image: item.thumbnail)
+        if !item.isGroup {
+            item.onThumbnailUpdated = { [weak imageView] image in imageView?.image = image }
+        }
         imageView.imageScaling = .scaleProportionallyUpOrDown
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.wantsLayer = true

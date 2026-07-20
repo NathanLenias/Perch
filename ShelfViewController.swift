@@ -117,7 +117,7 @@ class ShelfViewController: NSViewController {
             action: #selector(settingsTapped)
         )
         let trashButton = makeFooterButton(
-            symbol: "trash",
+            symbol: "eraser",
             title: String(localized: "toolbar.clear", defaultValue: "Clear"),
             action: #selector(clearAll)
         )
@@ -172,11 +172,14 @@ class ShelfViewController: NSViewController {
         button.contentTintColor = .secondaryLabelColor
         let config = NSImage.SymbolConfiguration(pointSize: 17, weight: .medium)
         button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: title)?.withSymbolConfiguration(config)
+        // Negative baseline offset pushes the label down, away from the icon
+        // (NSButton has no native image-title spacing control)
         button.attributedTitle = NSAttributedString(
             string: title,
             attributes: [
                 .font: NSFont.systemFont(ofSize: 12),
                 .foregroundColor: NSColor.tertiaryLabelColor,
+                .baselineOffset: -4,
             ]
         )
         button.toolTip = title
