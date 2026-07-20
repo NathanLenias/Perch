@@ -2,10 +2,16 @@ import AppKit
 import ServiceManagement
 import Quartz
 
+/// NSStackView is not flipped by default, so inside a scroll view its content
+/// hugs the bottom. Flipping makes items flow from the top like a list should.
+private final class FlippedStackView: NSStackView {
+    override var isFlipped: Bool { true }
+}
+
 class ShelfViewController: NSViewController {
 
     private let scrollView = NSScrollView()
-    private let stackView = NSStackView()
+    private let stackView: NSStackView = FlippedStackView()
     private let emptyLabel = NSTextField(labelWithString: String(localized: "drop.empty", defaultValue: "Drop files here"))
     private let pasteHintLabel = NSTextField(labelWithString: String(localized: "drop.pasteHint", defaultValue: "or paste with ⌘V"))
     private let emptyImageView = NSImageView()
@@ -330,7 +336,7 @@ class ShelfViewController: NSViewController {
     }
 
     private func updateSelectionVisuals() {
-        for case let itemView as BaseShelfItemView in stackView.arrangedSubviews {
+        for itemView in allItemViews {
             itemView.isSelected = selectedURLs.contains(itemView.item.url)
         }
     }
@@ -431,6 +437,12 @@ class ShelfViewController: NSViewController {
         toolbar.isHidden = true
         toolbarSeparator.isHidden = true
         previewController = pvc
+
+        // Take key focus right away: the system Quick Look panel resolves its
+        // controller through the key window's responder chain, so without this
+        // the expand button would open an empty "No selection" panel.
+        view.window?.makeKey()
+        view.window?.makeFirstResponder(pvc.view)
     }
 
     func dismissPreview() {
@@ -450,14 +462,26 @@ class ShelfViewController: NSViewController {
     // the panel or the app crashes on the next panel access.
     private var quickLookItem: ShelfItem?
 
+    /// Opens the system Quick Look panel, or closes it if already open (toggle).
     func openQuickLookPanel(for item: ShelfItem) {
+        if QLPreviewPanel.sharedPreviewPanelExists(),
+           let panel = QLPreviewPanel.shared(), panel.isVisible {
+            panel.orderOut(nil)
+            quickLookItem = nil
+            return
+        }
+
         quickLookItem = item
         // The panel finds its controller through the key window's responder
-        // chain — make sure that chain is ours before showing it.
+        // chain — make sure that chain is ours before showing it. Setting the
+        // dataSource directly as well covers the case where activation is
+        // still in flight when the panel does its lookup.
         NSApp.activate(ignoringOtherApps: true)
         view.window?.makeKey()
         guard let panel = QLPreviewPanel.shared() else { return }
         panel.updateController()
+        panel.dataSource = self
+        panel.reloadData()
         panel.makeKeyAndOrderFront(nil)
     }
 
@@ -558,26 +582,55 @@ class ShelfViewController: NSViewController {
     private func rebuildItemViews() {
         stackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
         stackView.alignment = .leading
-        stackView.spacing = (viewMode == .list) ? 2 : 4
+        stackView.spacing = (viewMode == .list) ? 2 : 8
 
-        for item in items {
-            let itemView: BaseShelfItemView = (viewMode == .list)
-                ? ShelfItemView(item: item)
-                : ShelfGridItemView(item: item)
-            itemView.translatesAutoresizingMaskIntoConstraints = false
-            itemView.isSelected = selectedURLs.contains(item.url)
-            itemView.onRemove = { [weak self] in self?.removeItem(item) }
-            itemView.onUngroup = { [weak self] in self?.ungroupItem(item) }
-            itemView.onCopy = { [weak self] in self?.copyToClipboard(urls: item.urls) }
-            itemView.onPreview = { [weak self] in self?.showPreview(for: item) }
-            itemView.onDragSessionChanged = { [weak self] active in self?.setDragOutMode(active) }
-            itemView.onDragCompleted = { [weak self] in self?.removeSelectedItems() }
-            itemView.onMouseDown = { [weak self] cmd, shift in self?.handleMouseDown(item, command: cmd, shift: shift) }
-            itemView.onMouseUp = { [weak self] dragged, cmd, shift in self?.handleMouseUp(item, wasDragged: dragged, command: cmd, shift: shift) }
-            itemView.draggedItems = { [weak self] in self?.selectedItems() ?? [item] }
-            stackView.addArrangedSubview(itemView)
-            itemView.widthAnchor.constraint(equalTo: stackView.widthAnchor, constant: -16).isActive = true
+        if viewMode == .list {
+            for item in items {
+                let itemView = makeItemView(for: item)
+                stackView.addArrangedSubview(itemView)
+                itemView.widthAnchor.constraint(equalTo: stackView.widthAnchor, constant: -16).isActive = true
+            }
+        } else {
+            // Grid: rows of two equal-width cards
+            for start in stride(from: 0, to: items.count, by: 2) {
+                let pair = Array(items[start..<min(start + 2, items.count)])
+                let row = NSStackView()
+                row.orientation = .horizontal
+                row.distribution = .fillEqually
+                row.spacing = 8
+                row.translatesAutoresizingMaskIntoConstraints = false
+                for item in pair { row.addArrangedSubview(makeItemView(for: item)) }
+                if pair.count == 1 { row.addArrangedSubview(NSView()) }
+                stackView.addArrangedSubview(row)
+                row.widthAnchor.constraint(equalTo: stackView.widthAnchor, constant: -16).isActive = true
+            }
         }
+    }
+
+    private func makeItemView(for item: ShelfItem) -> BaseShelfItemView {
+        let itemView: BaseShelfItemView = (viewMode == .list)
+            ? ShelfItemView(item: item)
+            : ShelfGridItemView(item: item)
+        itemView.translatesAutoresizingMaskIntoConstraints = false
+        itemView.isSelected = selectedURLs.contains(item.url)
+        itemView.onRemove = { [weak self] in self?.removeItem(item) }
+        itemView.onUngroup = { [weak self] in self?.ungroupItem(item) }
+        itemView.onCopy = { [weak self] in self?.copyToClipboard(urls: item.urls) }
+        itemView.onPreview = { [weak self] in self?.showPreview(for: item) }
+        itemView.onDragSessionChanged = { [weak self] active in self?.setDragOutMode(active) }
+        itemView.onDragCompleted = { [weak self] in self?.removeSelectedItems() }
+        itemView.onMouseDown = { [weak self] cmd, shift in self?.handleMouseDown(item, command: cmd, shift: shift) }
+        itemView.onMouseUp = { [weak self] dragged, cmd, shift in self?.handleMouseUp(item, wasDragged: dragged, command: cmd, shift: shift) }
+        itemView.draggedItems = { [weak self] in self?.selectedItems() ?? [item] }
+        return itemView
+    }
+
+    /// All item views, including those nested inside grid rows.
+    private var allItemViews: [BaseShelfItemView] {
+        stackView.arrangedSubviews.flatMap { subview -> [NSView] in
+            if subview is BaseShelfItemView { return [subview] }
+            return (subview as? NSStackView)?.arrangedSubviews ?? []
+        }.compactMap { $0 as? BaseShelfItemView }
     }
 
     private func updateEmptyState() {

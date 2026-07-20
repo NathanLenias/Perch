@@ -9,6 +9,7 @@ class BaseShelfItemView: NSView, NSDraggingSource {
     let ungroupButton = NSButton()
     let copyButton = NSButton()
     let previewButton = NSButton()
+    let hoverPill = NSStackView()
 
     var onRemove: (() -> Void)?
     var onUngroup: (() -> Void)?
@@ -52,11 +53,10 @@ class BaseShelfItemView: NSView, NSDraggingSource {
         removeButton.bezelStyle = .accessoryBarAction
         removeButton.imagePosition = .imageOnly
         removeButton.isBordered = false
-        removeButton.contentTintColor = .tertiaryLabelColor
+        removeButton.contentTintColor = .secondaryLabelColor
         removeButton.target = self
         removeButton.action = #selector(removeTapped)
         removeButton.translatesAutoresizingMaskIntoConstraints = false
-        removeButton.isHidden = true
         removeButton.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: String(localized: "a11y.remove", defaultValue: "Remove item"))?.withSymbolConfiguration(symbolConfig)
         removeButton.toolTip = String(localized: "a11y.remove", defaultValue: "Remove item")
     }
@@ -65,11 +65,10 @@ class BaseShelfItemView: NSView, NSDraggingSource {
         copyButton.bezelStyle = .accessoryBarAction
         copyButton.imagePosition = .imageOnly
         copyButton.isBordered = false
-        copyButton.contentTintColor = .tertiaryLabelColor
+        copyButton.contentTintColor = .perchAccent
         copyButton.target = self
         copyButton.action = #selector(copyTapped)
         copyButton.translatesAutoresizingMaskIntoConstraints = false
-        copyButton.isHidden = true
         copyButton.image = NSImage(systemSymbolName: "doc.on.doc", accessibilityDescription: String(localized: "a11y.copy", defaultValue: "Copy"))?.withSymbolConfiguration(symbolConfig)
         copyButton.toolTip = String(localized: "a11y.copy", defaultValue: "Copy")
     }
@@ -78,11 +77,10 @@ class BaseShelfItemView: NSView, NSDraggingSource {
         previewButton.bezelStyle = .accessoryBarAction
         previewButton.imagePosition = .imageOnly
         previewButton.isBordered = false
-        previewButton.contentTintColor = .tertiaryLabelColor
+        previewButton.contentTintColor = .secondaryLabelColor
         previewButton.target = self
         previewButton.action = #selector(previewTapped)
         previewButton.translatesAutoresizingMaskIntoConstraints = false
-        previewButton.isHidden = true
         previewButton.image = NSImage(systemSymbolName: "eye", accessibilityDescription: String(localized: "a11y.preview", defaultValue: "Preview"))?.withSymbolConfiguration(symbolConfig)
         previewButton.toolTip = String(localized: "a11y.preview", defaultValue: "Preview")
     }
@@ -91,13 +89,37 @@ class BaseShelfItemView: NSView, NSDraggingSource {
         ungroupButton.bezelStyle = .accessoryBarAction
         ungroupButton.imagePosition = .imageOnly
         ungroupButton.isBordered = false
-        ungroupButton.contentTintColor = .tertiaryLabelColor
+        ungroupButton.contentTintColor = .secondaryLabelColor
         ungroupButton.target = self
         ungroupButton.action = #selector(ungroupTapped)
         ungroupButton.translatesAutoresizingMaskIntoConstraints = false
-        ungroupButton.isHidden = true
         ungroupButton.image = NSImage(systemSymbolName: "rectangle.3.group", accessibilityDescription: String(localized: "a11y.ungroup", defaultValue: "Split"))?.withSymbolConfiguration(symbolConfig)
         ungroupButton.toolTip = String(localized: "a11y.ungroup", defaultValue: "Split")
+    }
+
+    /// Groups the hover actions in a solid rounded pill (as in the mockups)
+    /// so they stay readable over thumbnails and busy content.
+    func setupHoverPill(with buttons: [NSButton], buttonSize: CGFloat = 26) {
+        hoverPill.orientation = .horizontal
+        hoverPill.spacing = 2
+        hoverPill.edgeInsets = NSEdgeInsets(top: 4, left: 6, bottom: 4, right: 6)
+        hoverPill.wantsLayer = true
+        hoverPill.layer?.cornerRadius = 12
+        hoverPill.layer?.cornerCurve = .continuous
+        hoverPill.layer?.backgroundColor = NSColor.controlBackgroundColor.withAlphaComponent(0.95).cgColor
+        hoverPill.layer?.borderWidth = 1
+        hoverPill.layer?.borderColor = NSColor.separatorColor.cgColor
+        hoverPill.layer?.shadowOpacity = 0.3
+        hoverPill.layer?.shadowRadius = 6
+        hoverPill.layer?.shadowOffset = CGSize(width: 0, height: -2)
+        hoverPill.translatesAutoresizingMaskIntoConstraints = false
+        hoverPill.isHidden = true
+        for button in buttons {
+            hoverPill.addArrangedSubview(button)
+            button.widthAnchor.constraint(equalToConstant: buttonSize).isActive = true
+            button.heightAnchor.constraint(equalToConstant: buttonSize).isActive = true
+        }
+        addSubview(hoverPill)
     }
 
     // MARK: - Hover tracking
@@ -114,21 +136,12 @@ class BaseShelfItemView: NSView, NSDraggingSource {
     }
 
     override func mouseEntered(with event: NSEvent) {
-        removeButton.isHidden = false
-        copyButton.isHidden = false
-        if item.isGroup {
-            ungroupButton.isHidden = false
-        } else {
-            previewButton.isHidden = false
-        }
+        hoverPill.isHidden = false
         mouseEnteredExtra()
     }
 
     override func mouseExited(with event: NSEvent) {
-        removeButton.isHidden = true
-        copyButton.isHidden = true
-        ungroupButton.isHidden = true
-        previewButton.isHidden = true
+        hoverPill.isHidden = true
         mouseExitedExtra()
     }
 
@@ -227,7 +240,7 @@ class BaseShelfItemView: NSView, NSDraggingSource {
         copyButton.contentTintColor = .systemGreen
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
             self?.copyButton.image = original
-            self?.copyButton.contentTintColor = .tertiaryLabelColor
+            self?.copyButton.contentTintColor = .perchAccent
         }
     }
 }
@@ -308,14 +321,12 @@ class ShelfItemView: BaseShelfItemView {
         addSubview(iconView)
         addSubview(textStack)
         addSubview(countBadge)
-        addSubview(ungroupButton)
-        addSubview(copyButton)
-        addSubview(previewButton)
-        addSubview(removeButton)
 
-        // Hover actions, from the right: × | split (groups) or eye (singles) | copy
-        let copyNeighbor = item.isGroup ? ungroupButton : removeButton
-        let labelNeighbor = item.isGroup ? copyButton : previewButton
+        // Hover pill, from the left: eye (singles) or split (groups) | copy | ×
+        let actionButtons = item.isGroup
+            ? [copyButton, ungroupButton, removeButton]
+            : [previewButton, copyButton, removeButton]
+        setupHoverPill(with: actionButtons)
 
         NSLayoutConstraint.activate([
             heightAnchor.constraint(equalToConstant: 62),
@@ -327,32 +338,17 @@ class ShelfItemView: BaseShelfItemView {
 
             textStack.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 11),
             textStack.centerYAnchor.constraint(equalTo: centerYAnchor),
-            textStack.trailingAnchor.constraint(lessThanOrEqualTo: labelNeighbor.leadingAnchor, constant: -6),
+            textStack.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -12),
 
             countBadge.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -10),
             countBadge.centerYAnchor.constraint(equalTo: centerYAnchor),
             countBadge.widthAnchor.constraint(greaterThanOrEqualToConstant: 24),
             countBadge.heightAnchor.constraint(equalToConstant: 24),
 
-            removeButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -10),
-            removeButton.centerYAnchor.constraint(equalTo: centerYAnchor),
-            removeButton.widthAnchor.constraint(equalToConstant: 24),
-            removeButton.heightAnchor.constraint(equalToConstant: 24),
-
-            ungroupButton.trailingAnchor.constraint(equalTo: removeButton.leadingAnchor, constant: -6),
-            ungroupButton.centerYAnchor.constraint(equalTo: centerYAnchor),
-            ungroupButton.widthAnchor.constraint(equalToConstant: 24),
-            ungroupButton.heightAnchor.constraint(equalToConstant: 24),
-
-            copyButton.trailingAnchor.constraint(equalTo: copyNeighbor.leadingAnchor, constant: -6),
-            copyButton.centerYAnchor.constraint(equalTo: centerYAnchor),
-            copyButton.widthAnchor.constraint(equalToConstant: 24),
-            copyButton.heightAnchor.constraint(equalToConstant: 24),
-
-            previewButton.trailingAnchor.constraint(equalTo: copyButton.leadingAnchor, constant: -6),
-            previewButton.centerYAnchor.constraint(equalTo: centerYAnchor),
-            previewButton.widthAnchor.constraint(equalToConstant: 24),
-            previewButton.heightAnchor.constraint(equalToConstant: 24),
+            // The pill overlays the row's trailing edge; its solid background
+            // keeps it readable over the text it may cover
+            hoverPill.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
+            hoverPill.centerYAnchor.constraint(equalTo: centerYAnchor),
         ])
     }
 
@@ -444,8 +440,8 @@ class ShelfGridItemView: BaseShelfItemView {
         subtitleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        let symbolConfig = NSImage.SymbolConfiguration(pointSize: 12, weight: .bold)
-        setupRemoveButton(symbolConfig: symbolConfig, symbolName: "xmark.circle.fill")
+        let symbolConfig = NSImage.SymbolConfiguration(pointSize: 12, weight: .semibold)
+        setupRemoveButton(symbolConfig: symbolConfig)
         setupUngroupButton(symbolConfig: symbolConfig)
         setupCopyButton(symbolConfig: symbolConfig)
         setupPreviewButton(symbolConfig: symbolConfig)
@@ -453,48 +449,30 @@ class ShelfGridItemView: BaseShelfItemView {
         addSubview(imageView)
         addSubview(label)
         addSubview(subtitleLabel)
-        addSubview(ungroupButton)
-        addSubview(copyButton)
-        addSubview(previewButton)
-        addSubview(removeButton)
 
-        // Hover actions stack below the × : split (groups) or eye (singles), then copy
-        let copyTopNeighbor = item.isGroup ? ungroupButton : previewButton
+        // Hover pill floating over the top of the thumbnail
+        let actionButtons = item.isGroup
+            ? [copyButton, ungroupButton, removeButton]
+            : [previewButton, copyButton, removeButton]
+        setupHoverPill(with: actionButtons)
 
         NSLayoutConstraint.activate([
-            imageView.topAnchor.constraint(equalTo: topAnchor, constant: 4),
+            imageView.topAnchor.constraint(equalTo: topAnchor, constant: 6),
             imageView.centerXAnchor.constraint(equalTo: centerXAnchor),
-            imageView.widthAnchor.constraint(equalToConstant: 92),
-            imageView.heightAnchor.constraint(equalToConstant: 92),
+            imageView.widthAnchor.constraint(equalToConstant: 120),
+            imageView.heightAnchor.constraint(equalToConstant: 120),
 
-            label.topAnchor.constraint(equalTo: imageView.bottomAnchor, constant: 2),
+            label.topAnchor.constraint(equalTo: imageView.bottomAnchor, constant: 4),
             label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
             label.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
 
             subtitleLabel.topAnchor.constraint(equalTo: label.bottomAnchor, constant: 1),
             subtitleLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
             subtitleLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
-            subtitleLabel.bottomAnchor.constraint(equalTo: bottomAnchor),
+            subtitleLabel.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -6),
 
-            removeButton.topAnchor.constraint(equalTo: imageView.topAnchor, constant: -4),
-            removeButton.trailingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: 4),
-            removeButton.widthAnchor.constraint(equalToConstant: 22),
-            removeButton.heightAnchor.constraint(equalToConstant: 22),
-
-            ungroupButton.topAnchor.constraint(equalTo: removeButton.bottomAnchor, constant: 3),
-            ungroupButton.trailingAnchor.constraint(equalTo: removeButton.trailingAnchor),
-            ungroupButton.widthAnchor.constraint(equalToConstant: 22),
-            ungroupButton.heightAnchor.constraint(equalToConstant: 22),
-
-            previewButton.topAnchor.constraint(equalTo: removeButton.bottomAnchor, constant: 3),
-            previewButton.trailingAnchor.constraint(equalTo: removeButton.trailingAnchor),
-            previewButton.widthAnchor.constraint(equalToConstant: 22),
-            previewButton.heightAnchor.constraint(equalToConstant: 22),
-
-            copyButton.topAnchor.constraint(equalTo: copyTopNeighbor.bottomAnchor, constant: 3),
-            copyButton.trailingAnchor.constraint(equalTo: removeButton.trailingAnchor),
-            copyButton.widthAnchor.constraint(equalToConstant: 22),
-            copyButton.heightAnchor.constraint(equalToConstant: 22),
+            hoverPill.topAnchor.constraint(equalTo: imageView.topAnchor, constant: 6),
+            hoverPill.centerXAnchor.constraint(equalTo: centerXAnchor),
         ])
     }
 
