@@ -9,6 +9,10 @@ class PreviewViewController: NSViewController {
     let item: ShelfItem
     var onBack: (() -> Void)?
     var onCopy: (() -> Void)?
+    /// Asks the owner to open the system Quick Look panel. The owner handles
+    /// panel control: it outlives this ephemeral controller, so the panel's
+    /// unretained dataSource can never dangle.
+    var onExpand: (() -> Void)?
 
     private var previewView: QLPreviewView?
 
@@ -49,7 +53,7 @@ class PreviewViewController: NSViewController {
         let backButton = makeBarButton(symbol: "chevron.left", accessibilityLabel: String(localized: "preview.back", defaultValue: "Back"), action: #selector(backTapped))
 
         let titleLabel = NSTextField(labelWithString: item.name)
-        titleLabel.font = .systemFont(ofSize: 12, weight: .semibold)
+        titleLabel.font = .systemFont(ofSize: 14, weight: .semibold)
         titleLabel.textColor = .labelColor
         titleLabel.lineBreakMode = .byTruncatingMiddle
         titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
@@ -100,7 +104,7 @@ class PreviewViewController: NSViewController {
 
     private func setupMetaAndActions() {
         let nameLabel = NSTextField(labelWithString: item.name)
-        nameLabel.font = .systemFont(ofSize: 12, weight: .semibold)
+        nameLabel.font = .systemFont(ofSize: 14, weight: .semibold)
         nameLabel.textColor = .labelColor
         nameLabel.lineBreakMode = .byTruncatingMiddle
 
@@ -109,7 +113,7 @@ class PreviewViewController: NSViewController {
             subtitle += " · " + String(localized: "preview.pageCount \(pages)")
         }
         let subtitleLabel = NSTextField(labelWithString: subtitle)
-        subtitleLabel.font = .systemFont(ofSize: 10.5)
+        subtitleLabel.font = .systemFont(ofSize: 12)
         subtitleLabel.textColor = .tertiaryLabelColor
 
         metaStack.orientation = .vertical
@@ -164,14 +168,14 @@ class PreviewViewController: NSViewController {
         button.imagePosition = .imageOnly
         button.isBordered = false
         button.contentTintColor = .secondaryLabelColor
-        let config = NSImage.SymbolConfiguration(pointSize: 11, weight: .semibold)
+        let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .semibold)
         button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: accessibilityLabel)?.withSymbolConfiguration(config)
         button.toolTip = accessibilityLabel
         button.target = self
         button.action = action
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.widthAnchor.constraint(equalToConstant: 22).isActive = true
-        button.heightAnchor.constraint(equalToConstant: 22).isActive = true
+        button.widthAnchor.constraint(equalToConstant: 28).isActive = true
+        button.heightAnchor.constraint(equalToConstant: 28).isActive = true
         return button
     }
 
@@ -186,21 +190,21 @@ class PreviewViewController: NSViewController {
         button.target = self
         button.action = action
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.heightAnchor.constraint(equalToConstant: 32).isActive = true
+        button.heightAnchor.constraint(equalToConstant: 42).isActive = true
 
-        let accent = NSColor(named: "AccentAmber") ?? .controlAccentColor
+        let accent = NSColor.perchAccent
         let textColor: NSColor = filled ? .black.withAlphaComponent(0.85) : .secondaryLabelColor
         button.layer?.backgroundColor = filled
             ? accent.cgColor
             : NSColor.labelColor.withAlphaComponent(0.08).cgColor
 
-        let config = NSImage.SymbolConfiguration(pointSize: 11, weight: .semibold)
+        let config = NSImage.SymbolConfiguration(pointSize: 13.5, weight: .semibold)
         button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?.withSymbolConfiguration(config)
         button.contentTintColor = textColor
         button.attributedTitle = NSAttributedString(
             string: " " + title,
             attributes: [
-                .font: NSFont.systemFont(ofSize: 12.5, weight: .semibold),
+                .font: NSFont.systemFont(ofSize: 14.5, weight: .semibold),
                 .foregroundColor: textColor,
             ]
         )
@@ -221,37 +225,7 @@ class PreviewViewController: NSViewController {
         NSWorkspace.shared.open(item.url)
     }
 
-    /// Opens the system Quick Look panel for a full-size preview.
     @objc private func expandTapped() {
-        NSApp.activate(ignoringOtherApps: true)
-        guard let panel = QLPreviewPanel.shared() else { return }
-        panel.makeKeyAndOrderFront(nil)
-    }
-
-    // MARK: - QLPreviewPanel (system panel) support
-
-    override func acceptsPreviewPanelControl(_ panel: QLPreviewPanel!) -> Bool {
-        true
-    }
-
-    override func beginPreviewPanelControl(_ panel: QLPreviewPanel!) {
-        panel.dataSource = self
-        panel.reloadData()
-    }
-
-    override func endPreviewPanelControl(_ panel: QLPreviewPanel!) {
-        panel.dataSource = nil
-    }
-}
-
-// MARK: - QLPreviewPanelDataSource
-
-extension PreviewViewController: QLPreviewPanelDataSource {
-    func numberOfPreviewItems(in panel: QLPreviewPanel!) -> Int {
-        1
-    }
-
-    func previewPanel(_ panel: QLPreviewPanel!, previewItemAt index: Int) -> QLPreviewItem! {
-        item.url as NSURL
+        onExpand?()
     }
 }

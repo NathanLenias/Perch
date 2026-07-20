@@ -1,5 +1,6 @@
 import AppKit
 import ServiceManagement
+import Quartz
 
 class ShelfViewController: NSViewController {
 
@@ -48,7 +49,7 @@ class ShelfViewController: NSViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        preferredContentSize = NSSize(width: 250, height: 360)
+        preferredContentSize = NSSize(width: 380, height: 540)
         setupHeader()
         setupToolbar()
         setupScrollView()
@@ -62,13 +63,13 @@ class ShelfViewController: NSViewController {
     private let headerLogoView = NSImageView()
 
     private func setupHeader() {
-        let logoConfig = NSImage.SymbolConfiguration(pointSize: 12, weight: .semibold)
+        let logoConfig = NSImage.SymbolConfiguration(pointSize: 15, weight: .semibold)
         headerLogoView.image = NSImage(systemSymbolName: "bird.fill", accessibilityDescription: nil)?.withSymbolConfiguration(logoConfig)
             ?? NSImage(named: "BirdPerch")
         headerLogoView.contentTintColor = .perchAccent
         headerLogoView.translatesAutoresizingMaskIntoConstraints = false
 
-        headerTitleLabel.font = .systemFont(ofSize: 13, weight: .bold)
+        headerTitleLabel.font = .systemFont(ofSize: 16, weight: .bold)
         headerTitleLabel.textColor = .labelColor
         headerTitleLabel.translatesAutoresizingMaskIntoConstraints = false
 
@@ -79,25 +80,25 @@ class ShelfViewController: NSViewController {
         closeButton.action = #selector(hideShelf)
         closeButton.translatesAutoresizingMaskIntoConstraints = false
         closeButton.contentTintColor = .secondaryLabelColor
-        let symbolConfig = NSImage.SymbolConfiguration(pointSize: 10, weight: .semibold)
+        let symbolConfig = NSImage.SymbolConfiguration(pointSize: 13, weight: .semibold)
         closeButton.image = NSImage(systemSymbolName: "xmark", accessibilityDescription: String(localized: "a11y.hideShelf", defaultValue: "Hide shelf"))?.withSymbolConfiguration(symbolConfig)
 
         contentView.addSubview(headerLogoView)
         contentView.addSubview(headerTitleLabel)
         contentView.addSubview(closeButton)
         NSLayoutConstraint.activate([
-            headerLogoView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 14),
+            headerLogoView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             headerLogoView.centerYAnchor.constraint(equalTo: headerTitleLabel.centerYAnchor),
-            headerLogoView.widthAnchor.constraint(equalToConstant: 16),
-            headerLogoView.heightAnchor.constraint(equalToConstant: 16),
+            headerLogoView.widthAnchor.constraint(equalToConstant: 20),
+            headerLogoView.heightAnchor.constraint(equalToConstant: 20),
 
-            headerTitleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 14),
-            headerTitleLabel.leadingAnchor.constraint(equalTo: headerLogoView.trailingAnchor, constant: 6),
+            headerTitleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
+            headerTitleLabel.leadingAnchor.constraint(equalTo: headerLogoView.trailingAnchor, constant: 7),
 
             closeButton.centerYAnchor.constraint(equalTo: headerTitleLabel.centerYAnchor),
-            closeButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
-            closeButton.widthAnchor.constraint(equalToConstant: 18),
-            closeButton.heightAnchor.constraint(equalToConstant: 18),
+            closeButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -14),
+            closeButton.widthAnchor.constraint(equalToConstant: 26),
+            closeButton.heightAnchor.constraint(equalToConstant: 26),
         ])
     }
 
@@ -115,7 +116,7 @@ class ShelfViewController: NSViewController {
             action: #selector(clearAll)
         )
 
-        let symbolConfig = NSImage.SymbolConfiguration(pointSize: 11, weight: .medium)
+        let symbolConfig = NSImage.SymbolConfiguration(pointSize: 14, weight: .medium)
         viewToggle.segmentCount = 2
         viewToggle.trackingMode = .selectOne
         viewToggle.setImage(NSImage(systemSymbolName: "list.bullet", accessibilityDescription: String(localized: "a11y.toggleView", defaultValue: "Toggle view"))?.withSymbolConfiguration(symbolConfig), forSegment: 0)
@@ -153,7 +154,7 @@ class ShelfViewController: NSViewController {
             toolbar.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             toolbar.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             toolbar.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-            toolbar.heightAnchor.constraint(equalToConstant: 44),
+            toolbar.heightAnchor.constraint(equalToConstant: 58),
         ])
     }
 
@@ -163,12 +164,12 @@ class ShelfViewController: NSViewController {
         button.isBordered = false
         button.imagePosition = .imageAbove
         button.contentTintColor = .secondaryLabelColor
-        let config = NSImage.SymbolConfiguration(pointSize: 11, weight: .medium)
+        let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .medium)
         button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: title)?.withSymbolConfiguration(config)
         button.attributedTitle = NSAttributedString(
             string: title,
             attributes: [
-                .font: NSFont.systemFont(ofSize: 9),
+                .font: NSFont.systemFont(ofSize: 11),
                 .foregroundColor: NSColor.tertiaryLabelColor,
             ]
         )
@@ -196,7 +197,7 @@ class ShelfViewController: NSViewController {
 
         contentView.addSubview(scrollView)
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 40),
+            scrollView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 52),
             scrollView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: toolbar.topAnchor),
@@ -211,12 +212,12 @@ class ShelfViewController: NSViewController {
         emptyImageView.translatesAutoresizingMaskIntoConstraints = false
         emptyImageView.unregisterDraggedTypes()
 
-        emptyLabel.font = .systemFont(ofSize: 12)
+        emptyLabel.font = .systemFont(ofSize: 14, weight: .medium)
         emptyLabel.textColor = .tertiaryLabelColor
         emptyLabel.alignment = .center
         emptyLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        pasteHintLabel.font = .systemFont(ofSize: 11)
+        pasteHintLabel.font = .systemFont(ofSize: 12.5)
         pasteHintLabel.textColor = .quaternaryLabelColor
         pasteHintLabel.alignment = .center
         pasteHintLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -226,9 +227,9 @@ class ShelfViewController: NSViewController {
         contentView.addSubview(pasteHintLabel)
         NSLayoutConstraint.activate([
             emptyImageView.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            emptyImageView.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: 16),
-            emptyImageView.widthAnchor.constraint(equalToConstant: 120),
-            emptyImageView.heightAnchor.constraint(equalToConstant: 120),
+            emptyImageView.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: 40),
+            emptyImageView.widthAnchor.constraint(equalToConstant: 170),
+            emptyImageView.heightAnchor.constraint(equalToConstant: 170),
 
             emptyLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
             emptyLabel.topAnchor.constraint(equalTo: emptyImageView.bottomAnchor, constant: 8),
@@ -375,12 +376,12 @@ class ShelfViewController: NSViewController {
         let color: NSColor = accented ? .perchAccent : .secondaryLabelColor
 
         let iconView = NSImageView()
-        let config = NSImage.SymbolConfiguration(pointSize: 11, weight: .medium)
+        let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
         iconView.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?.withSymbolConfiguration(config)
         iconView.contentTintColor = color
 
         let label = NSTextField(wrappingLabelWithString: text)
-        label.font = .systemFont(ofSize: 10.5)
+        label.font = .systemFont(ofSize: 12.5)
         label.textColor = color
         label.isSelectable = false
 
@@ -414,12 +415,13 @@ class ShelfViewController: NSViewController {
         let pvc = PreviewViewController(item: item)
         pvc.onBack = { [weak self] in self?.dismissPreview() }
         pvc.onCopy = { [weak self] in self?.copyToClipboard(urls: item.urls) }
+        pvc.onExpand = { [weak self] in self?.openQuickLookPanel(for: item) }
 
         addChild(pvc)
         pvc.view.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(pvc.view)
         NSLayoutConstraint.activate([
-            pvc.view.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 40),
+            pvc.view.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 52),
             pvc.view.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             pvc.view.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             pvc.view.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
@@ -433,11 +435,50 @@ class ShelfViewController: NSViewController {
 
     func dismissPreview() {
         guard let pvc = previewController else { return }
+        closeQuickLookPanelIfNeeded()
         pvc.view.removeFromSuperview()
         pvc.removeFromParent()
         previewController = nil
         scrollView.isHidden = false
         updateEmptyState()
+    }
+
+    // MARK: - System Quick Look panel
+
+    // Panel control lives here (not on the ephemeral PreviewViewController):
+    // QLPreviewPanel keeps an unretained dataSource, so its owner must outlive
+    // the panel or the app crashes on the next panel access.
+    private var quickLookItem: ShelfItem?
+
+    func openQuickLookPanel(for item: ShelfItem) {
+        quickLookItem = item
+        // The panel finds its controller through the key window's responder
+        // chain — make sure that chain is ours before showing it.
+        NSApp.activate(ignoringOtherApps: true)
+        view.window?.makeKey()
+        guard let panel = QLPreviewPanel.shared() else { return }
+        panel.updateController()
+        panel.makeKeyAndOrderFront(nil)
+    }
+
+    private func closeQuickLookPanelIfNeeded() {
+        guard QLPreviewPanel.sharedPreviewPanelExists(),
+              let panel = QLPreviewPanel.shared(), panel.isVisible else { return }
+        panel.orderOut(nil)
+        quickLookItem = nil
+    }
+
+    override func acceptsPreviewPanelControl(_ panel: QLPreviewPanel!) -> Bool {
+        true
+    }
+
+    override func beginPreviewPanelControl(_ panel: QLPreviewPanel!) {
+        panel.dataSource = self
+        panel.reloadData()
+    }
+
+    override func endPreviewPanelControl(_ panel: QLPreviewPanel!) {
+        panel.dataSource = nil
     }
 
     // MARK: - Clipboard
@@ -546,6 +587,18 @@ class ShelfViewController: NSViewController {
         pasteHintLabel.isHidden = !empty
         toolbar.isHidden = empty
         toolbarSeparator.isHidden = empty
+    }
+}
+
+// MARK: - QLPreviewPanelDataSource
+
+extension ShelfViewController: QLPreviewPanelDataSource {
+    func numberOfPreviewItems(in panel: QLPreviewPanel!) -> Int {
+        quickLookItem == nil ? 0 : 1
+    }
+
+    func previewPanel(_ panel: QLPreviewPanel!, previewItemAt index: Int) -> QLPreviewItem! {
+        quickLookItem.map { $0.url as NSURL }
     }
 }
 

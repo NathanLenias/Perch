@@ -29,7 +29,7 @@ class ShelfItem {
         self.name = url.lastPathComponent
         self.subtitle = Self.fileSubtitle(for: url)
         self.icon = NSWorkspace.shared.icon(forFile: url.path(percentEncoded: false))
-        self.icon.size = NSSize(width: 32, height: 32)
+        self.icon.size = NSSize(width: 48, height: 48)
         self.thumbnail = Self.generateThumbnail(for: url)
     }
 
@@ -42,10 +42,10 @@ class ShelfItem {
         // Composite stacked icon from up to 3 first files
         let stackIcons = urls.prefix(3).map { url -> NSImage in
             let icon = NSWorkspace.shared.icon(forFile: url.path(percentEncoded: false))
-            icon.size = NSSize(width: 32, height: 32)
+            icon.size = NSSize(width: 48, height: 48)
             return icon
         }
-        self.icon = Self.compositeStackedIcon(from: stackIcons, size: NSSize(width: 32, height: 32))
+        self.icon = Self.compositeStackedIcon(from: stackIcons, size: NSSize(width: 48, height: 48))
 
         // Larger composite for thumbnail
         let thumbIcons = urls.prefix(3).map { url -> NSImage in

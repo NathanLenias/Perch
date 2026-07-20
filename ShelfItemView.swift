@@ -149,7 +149,7 @@ class BaseShelfItemView: NSView, NSDraggingSource {
         let itemsToDrag = draggedItems?() ?? [item]
         var draggingItems: [NSDraggingItem] = []
 
-        let dragSize = NSSize(width: 48, height: 48)
+        let dragSize = NSSize(width: 64, height: 64)
         let mouseInView = convert(event.locationInWindow, from: nil)
         let dragOrigin = NSPoint(x: mouseInView.x - dragSize.width / 2,
                                  y: mouseInView.y - dragSize.height / 2)
@@ -222,7 +222,7 @@ class BaseShelfItemView: NSView, NSDraggingSource {
     /// Swap the copy icon for a checkmark briefly so the action feels acknowledged.
     private func showCopyFeedback() {
         let original = copyButton.image
-        let config = NSImage.SymbolConfiguration(pointSize: 9, weight: .semibold)
+        let config = NSImage.SymbolConfiguration(pointSize: 12, weight: .semibold)
         copyButton.image = NSImage(systemSymbolName: "checkmark", accessibilityDescription: nil)?.withSymbolConfiguration(config)
         copyButton.contentTintColor = .systemGreen
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
@@ -272,13 +272,13 @@ class ShelfItemView: BaseShelfItemView {
         iconView.layer?.masksToBounds = true
 
         let nameLabel = NSTextField(labelWithString: item.name)
-        nameLabel.font = .systemFont(ofSize: 11, weight: .medium)
+        nameLabel.font = .systemFont(ofSize: 13, weight: .medium)
         nameLabel.textColor = .labelColor
         nameLabel.lineBreakMode = .byTruncatingMiddle
         nameLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         let subtitleLabel = NSTextField(labelWithString: item.subtitle)
-        subtitleLabel.font = .systemFont(ofSize: 9.5)
+        subtitleLabel.font = .systemFont(ofSize: 11)
         subtitleLabel.textColor = .tertiaryLabelColor
         subtitleLabel.lineBreakMode = .byTruncatingTail
         subtitleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
@@ -290,16 +290,16 @@ class ShelfItemView: BaseShelfItemView {
         textStack.translatesAutoresizingMaskIntoConstraints = false
 
         countBadge.stringValue = "\(item.fileCount)"
-        countBadge.font = .systemFont(ofSize: 9, weight: .semibold)
+        countBadge.font = .systemFont(ofSize: 11, weight: .semibold)
         countBadge.textColor = .secondaryLabelColor
         countBadge.alignment = .center
         countBadge.wantsLayer = true
-        countBadge.layer?.cornerRadius = 9
+        countBadge.layer?.cornerRadius = 12
         countBadge.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.1).cgColor
         countBadge.translatesAutoresizingMaskIntoConstraints = false
         countBadge.isHidden = !item.isGroup
 
-        let symbolConfig = NSImage.SymbolConfiguration(pointSize: 9, weight: .semibold)
+        let symbolConfig = NSImage.SymbolConfiguration(pointSize: 12, weight: .semibold)
         setupRemoveButton(symbolConfig: symbolConfig)
         setupUngroupButton(symbolConfig: symbolConfig)
         setupCopyButton(symbolConfig: symbolConfig)
@@ -318,41 +318,41 @@ class ShelfItemView: BaseShelfItemView {
         let labelNeighbor = item.isGroup ? copyButton : previewButton
 
         NSLayoutConstraint.activate([
-            heightAnchor.constraint(equalToConstant: 46),
+            heightAnchor.constraint(equalToConstant: 62),
 
-            iconView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
+            iconView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 10),
             iconView.centerYAnchor.constraint(equalTo: centerYAnchor),
-            iconView.widthAnchor.constraint(equalToConstant: 30),
-            iconView.heightAnchor.constraint(equalToConstant: 30),
+            iconView.widthAnchor.constraint(equalToConstant: 42),
+            iconView.heightAnchor.constraint(equalToConstant: 42),
 
-            textStack.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 9),
+            textStack.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 11),
             textStack.centerYAnchor.constraint(equalTo: centerYAnchor),
-            textStack.trailingAnchor.constraint(lessThanOrEqualTo: labelNeighbor.leadingAnchor, constant: -4),
+            textStack.trailingAnchor.constraint(lessThanOrEqualTo: labelNeighbor.leadingAnchor, constant: -6),
 
-            countBadge.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
+            countBadge.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -10),
             countBadge.centerYAnchor.constraint(equalTo: centerYAnchor),
-            countBadge.widthAnchor.constraint(greaterThanOrEqualToConstant: 18),
-            countBadge.heightAnchor.constraint(equalToConstant: 18),
+            countBadge.widthAnchor.constraint(greaterThanOrEqualToConstant: 24),
+            countBadge.heightAnchor.constraint(equalToConstant: 24),
 
-            removeButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
+            removeButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -10),
             removeButton.centerYAnchor.constraint(equalTo: centerYAnchor),
-            removeButton.widthAnchor.constraint(equalToConstant: 16),
-            removeButton.heightAnchor.constraint(equalToConstant: 16),
+            removeButton.widthAnchor.constraint(equalToConstant: 24),
+            removeButton.heightAnchor.constraint(equalToConstant: 24),
 
-            ungroupButton.trailingAnchor.constraint(equalTo: removeButton.leadingAnchor, constant: -4),
+            ungroupButton.trailingAnchor.constraint(equalTo: removeButton.leadingAnchor, constant: -6),
             ungroupButton.centerYAnchor.constraint(equalTo: centerYAnchor),
-            ungroupButton.widthAnchor.constraint(equalToConstant: 16),
-            ungroupButton.heightAnchor.constraint(equalToConstant: 16),
+            ungroupButton.widthAnchor.constraint(equalToConstant: 24),
+            ungroupButton.heightAnchor.constraint(equalToConstant: 24),
 
-            copyButton.trailingAnchor.constraint(equalTo: copyNeighbor.leadingAnchor, constant: -4),
+            copyButton.trailingAnchor.constraint(equalTo: copyNeighbor.leadingAnchor, constant: -6),
             copyButton.centerYAnchor.constraint(equalTo: centerYAnchor),
-            copyButton.widthAnchor.constraint(equalToConstant: 16),
-            copyButton.heightAnchor.constraint(equalToConstant: 16),
+            copyButton.widthAnchor.constraint(equalToConstant: 24),
+            copyButton.heightAnchor.constraint(equalToConstant: 24),
 
-            previewButton.trailingAnchor.constraint(equalTo: copyButton.leadingAnchor, constant: -4),
+            previewButton.trailingAnchor.constraint(equalTo: copyButton.leadingAnchor, constant: -6),
             previewButton.centerYAnchor.constraint(equalTo: centerYAnchor),
-            previewButton.widthAnchor.constraint(equalToConstant: 16),
-            previewButton.heightAnchor.constraint(equalToConstant: 16),
+            previewButton.widthAnchor.constraint(equalToConstant: 24),
+            previewButton.heightAnchor.constraint(equalToConstant: 24),
         ])
     }
 
@@ -425,9 +425,9 @@ class ShelfGridItemView: BaseShelfItemView {
         imageView.layer?.cornerCurve = .continuous
         imageView.layer?.masksToBounds = true
 
-        let displayName = Self.truncateMiddle(item.name, maxLength: 20)
+        let displayName = Self.truncateMiddle(item.name, maxLength: 24)
         let label = NSTextField(labelWithString: displayName)
-        label.font = .systemFont(ofSize: 10, weight: .medium)
+        label.font = .systemFont(ofSize: 12, weight: .medium)
         label.textColor = .labelColor
         label.alignment = .center
         label.lineBreakMode = .byClipping
@@ -436,7 +436,7 @@ class ShelfGridItemView: BaseShelfItemView {
         label.translatesAutoresizingMaskIntoConstraints = false
 
         let subtitleLabel = NSTextField(labelWithString: item.subtitle)
-        subtitleLabel.font = .systemFont(ofSize: 9)
+        subtitleLabel.font = .systemFont(ofSize: 10.5)
         subtitleLabel.textColor = .tertiaryLabelColor
         subtitleLabel.alignment = .center
         subtitleLabel.lineBreakMode = .byTruncatingTail
@@ -444,7 +444,7 @@ class ShelfGridItemView: BaseShelfItemView {
         subtitleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        let symbolConfig = NSImage.SymbolConfiguration(pointSize: 9, weight: .bold)
+        let symbolConfig = NSImage.SymbolConfiguration(pointSize: 12, weight: .bold)
         setupRemoveButton(symbolConfig: symbolConfig, symbolName: "xmark.circle.fill")
         setupUngroupButton(symbolConfig: symbolConfig)
         setupCopyButton(symbolConfig: symbolConfig)
@@ -462,10 +462,10 @@ class ShelfGridItemView: BaseShelfItemView {
         let copyTopNeighbor = item.isGroup ? ungroupButton : previewButton
 
         NSLayoutConstraint.activate([
-            imageView.topAnchor.constraint(equalTo: topAnchor, constant: 2),
+            imageView.topAnchor.constraint(equalTo: topAnchor, constant: 4),
             imageView.centerXAnchor.constraint(equalTo: centerXAnchor),
-            imageView.widthAnchor.constraint(equalToConstant: 64),
-            imageView.heightAnchor.constraint(equalToConstant: 64),
+            imageView.widthAnchor.constraint(equalToConstant: 92),
+            imageView.heightAnchor.constraint(equalToConstant: 92),
 
             label.topAnchor.constraint(equalTo: imageView.bottomAnchor, constant: 2),
             label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
@@ -478,23 +478,23 @@ class ShelfGridItemView: BaseShelfItemView {
 
             removeButton.topAnchor.constraint(equalTo: imageView.topAnchor, constant: -4),
             removeButton.trailingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: 4),
-            removeButton.widthAnchor.constraint(equalToConstant: 16),
-            removeButton.heightAnchor.constraint(equalToConstant: 16),
+            removeButton.widthAnchor.constraint(equalToConstant: 22),
+            removeButton.heightAnchor.constraint(equalToConstant: 22),
 
-            ungroupButton.topAnchor.constraint(equalTo: removeButton.bottomAnchor, constant: 2),
+            ungroupButton.topAnchor.constraint(equalTo: removeButton.bottomAnchor, constant: 3),
             ungroupButton.trailingAnchor.constraint(equalTo: removeButton.trailingAnchor),
-            ungroupButton.widthAnchor.constraint(equalToConstant: 16),
-            ungroupButton.heightAnchor.constraint(equalToConstant: 16),
+            ungroupButton.widthAnchor.constraint(equalToConstant: 22),
+            ungroupButton.heightAnchor.constraint(equalToConstant: 22),
 
-            previewButton.topAnchor.constraint(equalTo: removeButton.bottomAnchor, constant: 2),
+            previewButton.topAnchor.constraint(equalTo: removeButton.bottomAnchor, constant: 3),
             previewButton.trailingAnchor.constraint(equalTo: removeButton.trailingAnchor),
-            previewButton.widthAnchor.constraint(equalToConstant: 16),
-            previewButton.heightAnchor.constraint(equalToConstant: 16),
+            previewButton.widthAnchor.constraint(equalToConstant: 22),
+            previewButton.heightAnchor.constraint(equalToConstant: 22),
 
-            copyButton.topAnchor.constraint(equalTo: copyTopNeighbor.bottomAnchor, constant: 2),
+            copyButton.topAnchor.constraint(equalTo: copyTopNeighbor.bottomAnchor, constant: 3),
             copyButton.trailingAnchor.constraint(equalTo: removeButton.trailingAnchor),
-            copyButton.widthAnchor.constraint(equalToConstant: 16),
-            copyButton.heightAnchor.constraint(equalToConstant: 16),
+            copyButton.widthAnchor.constraint(equalToConstant: 22),
+            copyButton.heightAnchor.constraint(equalToConstant: 22),
         ])
     }
 
