@@ -16,6 +16,10 @@ class ShelfItem {
     /// currently displayed view can refresh its image.
     var onThumbnailUpdated: ((NSImage) -> Void)?
 
+    /// Locked items stay in the shelf after a drag-out, for files that get
+    /// reused over and over. Off by default.
+    var isLocked = false
+
     /// Short description shown under the name: "PDF · 248 KB" for files,
     /// "Group · PDF, PNG" for stacks.
     let subtitle: String

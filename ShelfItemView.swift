@@ -9,6 +9,8 @@ class BaseShelfItemView: NSView, NSDraggingSource {
     let ungroupButton = NSButton()
     let previewButton = NSButton()
     let expandButton = NSButton()
+    let lockButton = NSButton()
+    let lockIndicator = NSImageView()
     let hoverPill = NSStackView()
 
     var onRemove: (() -> Void)?
@@ -16,6 +18,7 @@ class BaseShelfItemView: NSView, NSDraggingSource {
     var onPreview: (() -> Void)?
     /// Opens the system Quick Look panel directly from the item.
     var onExpandPreview: (() -> Void)?
+    var onToggleLock: (() -> Void)?
     /// Called with true when a drag-out session starts, false when it ends.
     var onDragSessionChanged: ((Bool) -> Void)?
     var onDragCompleted: (() -> Void)?
@@ -96,6 +99,36 @@ class BaseShelfItemView: NSView, NSDraggingSource {
         ungroupButton.translatesAutoresizingMaskIntoConstraints = false
         ungroupButton.image = NSImage(systemSymbolName: "rectangle.3.group", accessibilityDescription: String(localized: "a11y.ungroup", defaultValue: "Split"))?.withSymbolConfiguration(symbolConfig)
         ungroupButton.toolTip = String(localized: "a11y.ungroup", defaultValue: "Split")
+    }
+
+    func setupLockButton(symbolConfig: NSImage.SymbolConfiguration) {
+        lockButton.bezelStyle = .accessoryBarAction
+        lockButton.imagePosition = .imageOnly
+        lockButton.isBordered = false
+        lockButton.target = self
+        lockButton.action = #selector(lockTapped)
+        lockButton.translatesAutoresizingMaskIntoConstraints = false
+
+        // Small always-visible badge when the item is locked
+        let indicatorConfig = NSImage.SymbolConfiguration(pointSize: 9, weight: .bold)
+        lockIndicator.image = NSImage(systemSymbolName: "lock.fill", accessibilityDescription: nil)?.withSymbolConfiguration(indicatorConfig)
+        lockIndicator.contentTintColor = .perchAccent
+        lockIndicator.translatesAutoresizingMaskIntoConstraints = false
+
+        refreshLockUI()
+    }
+
+    /// Syncs the lock button and indicator with the item's state,
+    /// without rebuilding the row (keeps the hover pill open).
+    func refreshLockUI() {
+        let config = NSImage.SymbolConfiguration(pointSize: 12, weight: .semibold)
+        let label = item.isLocked
+            ? String(localized: "a11y.unlock", defaultValue: "Unlock")
+            : String(localized: "a11y.lock", defaultValue: "Keep in Perch after drag")
+        lockButton.image = NSImage(systemSymbolName: item.isLocked ? "lock.fill" : "lock.open", accessibilityDescription: label)?.withSymbolConfiguration(config)
+        lockButton.contentTintColor = item.isLocked ? .perchAccent : .secondaryLabelColor
+        lockButton.toolTip = label
+        lockIndicator.isHidden = !item.isLocked
     }
 
     /// Groups the hover actions in a solid rounded pill (as in the mockups)
@@ -231,6 +264,11 @@ class BaseShelfItemView: NSView, NSDraggingSource {
     @objc private func expandTapped() {
         onExpandPreview?()
     }
+
+    @objc private func lockTapped() {
+        onToggleLock?()
+        refreshLockUI()
+    }
 }
 
 // MARK: - ShelfItemView (list layout)
@@ -308,15 +346,17 @@ class ShelfItemView: BaseShelfItemView {
         setupUngroupButton(symbolConfig: symbolConfig)
         setupExpandButton(symbolConfig: symbolConfig)
         setupPreviewButton(symbolConfig: symbolConfig)
+        setupLockButton(symbolConfig: symbolConfig)
 
         addSubview(iconView)
         addSubview(textStack)
         addSubview(countBadge)
+        addSubview(lockIndicator)
 
-        // Hover pill: eye + Quick Look for singles, split for groups, then ×
+        // Hover pill: eye + Quick Look for singles, split for groups, lock, ×
         let actionButtons = item.isGroup
-            ? [ungroupButton, removeButton]
-            : [previewButton, expandButton, removeButton]
+            ? [ungroupButton, lockButton, removeButton]
+            : [previewButton, expandButton, lockButton, removeButton]
         setupHoverPill(with: actionButtons)
 
         NSLayoutConstraint.activate([
@@ -340,6 +380,9 @@ class ShelfItemView: BaseShelfItemView {
             // keeps it readable over the text it may cover
             hoverPill.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
             hoverPill.centerYAnchor.constraint(equalTo: centerYAnchor),
+
+            lockIndicator.bottomAnchor.constraint(equalTo: iconView.bottomAnchor, constant: 2),
+            lockIndicator.trailingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 4),
         ])
     }
 
@@ -439,15 +482,17 @@ class ShelfGridItemView: BaseShelfItemView {
         setupUngroupButton(symbolConfig: symbolConfig)
         setupExpandButton(symbolConfig: symbolConfig)
         setupPreviewButton(symbolConfig: symbolConfig)
+        setupLockButton(symbolConfig: symbolConfig)
 
         addSubview(imageView)
         addSubview(label)
         addSubview(subtitleLabel)
+        addSubview(lockIndicator)
 
         // Hover pill floating over the top of the thumbnail
         let actionButtons = item.isGroup
-            ? [ungroupButton, removeButton]
-            : [previewButton, expandButton, removeButton]
+            ? [ungroupButton, lockButton, removeButton]
+            : [previewButton, expandButton, lockButton, removeButton]
         setupHoverPill(with: actionButtons)
 
         NSLayoutConstraint.activate([
@@ -467,6 +512,9 @@ class ShelfGridItemView: BaseShelfItemView {
 
             hoverPill.topAnchor.constraint(equalTo: imageView.topAnchor, constant: 6),
             hoverPill.centerXAnchor.constraint(equalTo: centerXAnchor),
+
+            lockIndicator.bottomAnchor.constraint(equalTo: imageView.bottomAnchor, constant: -4),
+            lockIndicator.leadingAnchor.constraint(equalTo: imageView.leadingAnchor, constant: 4),
         ])
     }
 

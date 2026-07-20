@@ -286,9 +286,18 @@ class ShelfViewController: NSViewController {
         rebuildItemViews()
     }
 
+    /// Removes the dragged-out items. Locked items stay in the shelf —
+    /// unless their file no longer exists (it was actually moved away),
+    /// in which case keeping them would leave a dead entry.
     private func removeSelectedItems() {
         let toRemove = selectedURLs
-        items.removeAll { toRemove.contains($0.url) }
+        items.removeAll { item in
+            guard toRemove.contains(item.url) else { return false }
+            if item.isLocked {
+                return !FileManager.default.fileExists(atPath: item.url.path(percentEncoded: false))
+            }
+            return true
+        }
         selectedURLs.removeAll()
         rebuildItemViews()
         updateEmptyState()
@@ -620,6 +629,7 @@ class ShelfViewController: NSViewController {
         itemView.onUngroup = { [weak self] in self?.ungroupItem(item) }
         itemView.onPreview = { [weak self] in self?.showPreview(for: item) }
         itemView.onExpandPreview = { [weak self] in self?.openQuickLookPanel(for: item) }
+        itemView.onToggleLock = { item.isLocked.toggle() }
         itemView.onDragSessionChanged = { [weak self] active in self?.setDragOutMode(active) }
         itemView.onDragCompleted = { [weak self] in self?.removeSelectedItems() }
         itemView.onMouseDown = { [weak self] cmd, shift in self?.handleMouseDown(item, command: cmd, shift: shift) }
