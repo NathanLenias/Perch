@@ -26,6 +26,34 @@ enum ShelfTriggers {
         get { UserDefaults.standard.object(forKey: textKey) as? Bool ?? false }
         set { UserDefaults.standard.set(newValue, forKey: textKey) }
     }
+
+    /// Entries for building the "Show Shelf For" menu, shared by the gear
+    /// popup and the menu bar menu.
+    static func menuEntries() -> [(key: String, title: String, enabled: Bool)] {
+        [
+            ("files", String(localized: "trigger.files", defaultValue: "Files (images, PDFs…)"), files),
+            ("links", String(localized: "trigger.links", defaultValue: "Links"), links),
+            ("text", String(localized: "trigger.text", defaultValue: "Text"), text),
+        ]
+    }
+
+    static func isEnabled(_ key: String) -> Bool {
+        switch key {
+        case "files": files
+        case "links": links
+        case "text": text
+        default: false
+        }
+    }
+
+    static func toggle(_ key: String) {
+        switch key {
+        case "files": files.toggle()
+        case "links": links.toggle()
+        case "text": text.toggle()
+        default: break
+        }
+    }
 }
 
 protocol DragDetectorDelegate: AnyObject {
@@ -80,8 +108,8 @@ class DragDetector {
             guard currentCount != self.lastChangeCount else { return }
             self.lastChangeCount = currentCount
 
-            // Check if the drag carries something we can shelve
-            guard Self.pasteboardHasShelvableContent(self.dragPasteboard) else { return }
+            // Check if the drag carries something that should summon the shelf
+            guard Self.pasteboardShouldSummonShelf(self.dragPasteboard) else { return }
 
             self.isActiveDrag = true
             self.hideTimer?.invalidate()
@@ -101,31 +129,40 @@ class DragDetector {
 
     // MARK: - Shelvable content
 
-    /// True when a drag carries content that makes the shelf appear,
-    /// according to the user's trigger preferences (gear menu). Whatever is
-    /// disabled here is still accepted by the drop target when the shelf is
-    /// already visible.
-    static func pasteboardHasShelvableContent(_ pasteboard: NSPasteboard) -> Bool {
-        if ShelfTriggers.files {
-            if pasteboard.canReadObject(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) {
-                return true
-            }
-            if pasteboard.canReadObject(forClasses: [NSFilePromiseReceiver.self], options: nil) {
-                return true
-            }
-            if pasteboard.canReadItem(withDataConformingToTypes: [UTType.image.identifier]) {
-                return true
-            }
-        }
-        if ShelfTriggers.links,
-           let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL],
-           urls.contains(where: { $0.scheme == "http" || $0.scheme == "https" }) {
+    /// Should the shelf appear for this drag? Gated by the user's trigger
+    /// preferences ("Show Shelf For" menu).
+    static func pasteboardShouldSummonShelf(_ pasteboard: NSPasteboard) -> Bool {
+        (ShelfTriggers.files && hasFileContent(pasteboard))
+            || (ShelfTriggers.links && hasLinkContent(pasteboard))
+            || (ShelfTriggers.text && hasTextContent(pasteboard))
+    }
+
+    /// Can the shelf take this drag at all? Deliberately NOT gated by the
+    /// trigger preferences: those only control when the shelf appears; a
+    /// visible shelf accepts everything it knows how to store.
+    static func pasteboardHasSupportedContent(_ pasteboard: NSPasteboard) -> Bool {
+        hasFileContent(pasteboard) || hasLinkContent(pasteboard) || hasTextContent(pasteboard)
+    }
+
+    private static func hasFileContent(_ pasteboard: NSPasteboard) -> Bool {
+        if pasteboard.canReadObject(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) {
             return true
         }
-        if ShelfTriggers.text, pasteboard.string(forType: .string) != nil {
+        if pasteboard.canReadObject(forClasses: [NSFilePromiseReceiver.self], options: nil) {
             return true
         }
-        return false
+        return pasteboard.canReadItem(withDataConformingToTypes: [UTType.image.identifier])
+    }
+
+    private static func hasLinkContent(_ pasteboard: NSPasteboard) -> Bool {
+        guard let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL] else {
+            return false
+        }
+        return urls.contains { $0.scheme == "http" || $0.scheme == "https" }
+    }
+
+    private static func hasTextContent(_ pasteboard: NSPasteboard) -> Bool {
+        pasteboard.string(forType: .string) != nil
     }
 
     // MARK: - Mouse Up Handling

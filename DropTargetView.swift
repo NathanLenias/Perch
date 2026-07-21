@@ -36,11 +36,10 @@ class DropTargetView: NSVisualEffectView {
         isDroppable(sender.draggingPasteboard) ? .copy : []
     }
 
-    /// The drop target takes more than what makes the shelf appear: plain
-    /// text doesn't summon the shelf, but is welcome once it's visible.
+    /// A visible shelf accepts everything it can store, regardless of the
+    /// user's summon preferences (those only control when the shelf appears).
     private func isDroppable(_ pasteboard: NSPasteboard) -> Bool {
-        DragDetector.pasteboardHasShelvableContent(pasteboard)
-            || pasteboard.string(forType: .string) != nil
+        DragDetector.pasteboardHasSupportedContent(pasteboard)
     }
 
     override func draggingExited(_ sender: NSDraggingInfo?) {

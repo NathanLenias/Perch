@@ -63,6 +63,7 @@ class ShelfViewController: NSViewController {
         setupScrollView()
         setupEmptyState()
         setupDragHints()
+        updateEmptyState()
     }
 
     // MARK: - Layout
@@ -480,9 +481,8 @@ class ShelfViewController: NSViewController {
             ? String(localized: "dragout.title", defaultValue: "Moving…")
             : String(localized: "shelf.title", defaultValue: "Perch")
         dragHintsView.isHidden = !active
-        let footerHidden = active || items.isEmpty
-        toolbar.isHidden = footerHidden
-        toolbarSeparator.isHidden = footerHidden
+        toolbar.isHidden = active
+        toolbarSeparator.isHidden = active
     }
 
     // MARK: - Preview
@@ -625,16 +625,11 @@ class ShelfViewController: NSViewController {
             action: nil, keyEquivalent: ""
         )
         let showForMenu = NSMenu()
-        let triggers: [(String, String, Bool)] = [
-            ("files", String(localized: "trigger.files", defaultValue: "Files (images, PDFs…)"), ShelfTriggers.files),
-            ("links", String(localized: "trigger.links", defaultValue: "Links"), ShelfTriggers.links),
-            ("text", String(localized: "trigger.text", defaultValue: "Text"), ShelfTriggers.text),
-        ]
-        for (key, title, enabled) in triggers {
-            let item = NSMenuItem(title: title, action: #selector(triggerToggled(_:)), keyEquivalent: "")
+        for entry in ShelfTriggers.menuEntries() {
+            let item = NSMenuItem(title: entry.title, action: #selector(triggerToggled(_:)), keyEquivalent: "")
             item.target = self
-            item.representedObject = key
-            item.state = enabled ? .on : .off
+            item.representedObject = entry.key
+            item.state = entry.enabled ? .on : .off
             showForMenu.addItem(item)
         }
         menu.addItem(showForItem)
@@ -662,12 +657,8 @@ class ShelfViewController: NSViewController {
 
 
     @objc private func triggerToggled(_ sender: NSMenuItem) {
-        switch sender.representedObject as? String {
-        case "files": ShelfTriggers.files.toggle()
-        case "links": ShelfTriggers.links.toggle()
-        case "text": ShelfTriggers.text.toggle()
-        default: return
-        }
+        guard let key = sender.representedObject as? String else { return }
+        ShelfTriggers.toggle(key)
     }
 
     @objc private func viewToggleChanged() {
@@ -753,8 +744,11 @@ class ShelfViewController: NSViewController {
         emptyImageView.isHidden = !empty
         emptyLabel.isHidden = !empty
         pasteHintLabel.isHidden = !empty
-        toolbar.isHidden = empty
-        toolbarSeparator.isHidden = empty
+        // The footer stays visible even when empty (settings must always be
+        // reachable); it only makes way for the preview screen
+        let footerHidden = previewController != nil
+        toolbar.isHidden = footerHidden
+        toolbarSeparator.isHidden = footerHidden
     }
 }
 

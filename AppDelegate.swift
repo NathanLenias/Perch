@@ -64,6 +64,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         launchItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
         menu.addItem(launchItem)
 
+        let showForItem = NSMenuItem(
+            title: String(localized: "menu.showFor", defaultValue: "Show Shelf For"),
+            action: nil, keyEquivalent: ""
+        )
+        let showForMenu = NSMenu()
+        showForMenu.delegate = self
+        for entry in ShelfTriggers.menuEntries() {
+            let item = NSMenuItem(title: entry.title, action: #selector(triggerToggled(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = entry.key
+            item.state = entry.enabled ? .on : .off
+            showForMenu.addItem(item)
+        }
+        menu.addItem(showForItem)
+        menu.setSubmenu(showForMenu, for: showForItem)
+
         menu.addItem(NSMenuItem.separator())
 
         menu.addItem(NSMenuItem(
@@ -116,6 +132,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApplication.shared.terminate(nil)
     }
 
+    @objc private func triggerToggled(_ sender: NSMenuItem) {
+        guard let key = sender.representedObject as? String else { return }
+        ShelfTriggers.toggle(key)
+    }
+
     private func updateMenuItemTitle() {
         if let menu = statusItem.menu, let item = menu.items.first {
             item.title = shelfWindowController.isShelfVisible
@@ -130,8 +151,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 extension AppDelegate: NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
         updateMenuItemTitle()
-        for item in menu.items where item.action == #selector(toggleLaunchAtLogin) {
-            item.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        for item in menu.items {
+            if item.action == #selector(toggleLaunchAtLogin) {
+                item.state = SMAppService.mainApp.status == .enabled ? .on : .off
+            }
+            // Trigger toggles may also be changed from the gear menu;
+            // refresh their checkmarks whenever the menu opens
+            if let key = item.representedObject as? String {
+                item.state = ShelfTriggers.isEnabled(key) ? .on : .off
+            }
         }
     }
 }
