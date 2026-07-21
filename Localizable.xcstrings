@@ -297,6 +297,23 @@
         }
       }
     },
+    "drop.pending" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fetching…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Récupération…"
+          }
+        }
+      }
+    },
     "drop.empty" : {
       "extractionState" : "manual",
       "localizations" : {

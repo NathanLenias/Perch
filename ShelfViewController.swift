@@ -39,6 +39,8 @@ class ShelfViewController: NSViewController {
         effectView.blendingMode = .behindWindow
         effectView.state = .active
         effectView.onDrop = { [weak self] urls in self?.addItems(from: urls) }
+        effectView.onPendingBegin = { [weak self] in self?.beginPendingDrop() ?? UUID() }
+        effectView.onPendingResolved = { [weak self] id, url in self?.resolvePendingDrop(id, url: url) }
         effectView.translatesAutoresizingMaskIntoConstraints = false
 
         clipView.addSubview(effectView)
@@ -265,14 +267,70 @@ class ShelfViewController: NSViewController {
         updateEmptyState()
     }
 
-    var hasItems: Bool { !items.isEmpty }
+    var hasItems: Bool { !items.isEmpty || !pendingDrops.isEmpty }
     var onBecameEmpty: (() -> Void)?
     var onHideRequested: (() -> Void)?
+
+    // MARK: - Pending web drops
+
+    /// Web drops (file promises, downloads) land asynchronously; each one
+    /// shows as a spinner row until its file materializes.
+    private var pendingDrops: [UUID] = []
+
+    func beginPendingDrop() -> UUID {
+        let id = UUID()
+        pendingDrops.append(id)
+        rebuildItemViews()
+        updateEmptyState()
+        return id
+    }
+
+    func resolvePendingDrop(_ id: UUID, url: URL?) {
+        pendingDrops.removeAll { $0 == id }
+        if let url {
+            addItems(from: [url])
+        } else {
+            NSSound.beep()
+            rebuildItemViews()
+            updateEmptyState()
+            if !hasItems { onBecameEmpty?() }
+        }
+    }
+
+    private func makePendingView() -> NSView {
+        let container = FirstMouseStackView()
+        container.orientation = .horizontal
+        container.alignment = .centerY
+        container.spacing = 10
+        container.edgeInsets = NSEdgeInsets(top: 0, left: 14, bottom: 0, right: 14)
+        container.wantsLayer = true
+        container.layer?.cornerRadius = 10
+        container.layer?.cornerCurve = .continuous
+        container.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.06).cgColor
+        container.translatesAutoresizingMaskIntoConstraints = false
+
+        let spinner = NSProgressIndicator()
+        spinner.style = .spinning
+        spinner.controlSize = .small
+        spinner.startAnimation(nil)
+
+        let label = NSTextField(labelWithString: String(localized: "drop.pending", defaultValue: "Fetching…"))
+        label.font = .systemFont(ofSize: 12)
+        label.textColor = .secondaryLabelColor
+
+        container.addArrangedSubview(spinner)
+        container.addArrangedSubview(label)
+        container.heightAnchor.constraint(equalToConstant: 46).isActive = true
+        return container
+    }
 
     func removeItem(_ item: ShelfItem) {
         if previewController?.item === item { dismissPreview() }
         items.removeAll { $0 === item }
-        for url in item.urls { selectedURLs.remove(url) }
+        for url in item.urls {
+            selectedURLs.remove(url)
+            DropStore.deleteIfOwned(url)
+        }
         rebuildItemViews()
         updateEmptyState()
         if items.isEmpty { onBecameEmpty?() }
@@ -298,6 +356,8 @@ class ShelfViewController: NSViewController {
                 item.refreshMovedFiles()
                 return !item.fileExists
             }
+            // A copy-style drop (Mail, ⌥…) leaves a Perch-owned file behind
+            item.urls.forEach { DropStore.deleteIfOwned($0) }
             return true
         }
         selectedURLs.removeAll()
@@ -587,6 +647,9 @@ class ShelfViewController: NSViewController {
 
     @objc func clearAll() {
         dismissPreview()
+        for item in items {
+            item.urls.forEach { DropStore.deleteIfOwned($0) }
+        }
         items.removeAll()
         rebuildItemViews()
         updateEmptyState()
@@ -619,6 +682,13 @@ class ShelfViewController: NSViewController {
                 row.widthAnchor.constraint(equalTo: stackView.widthAnchor, constant: -16).isActive = true
             }
         }
+
+        // Web drops still materializing, shown last as spinner rows
+        for _ in pendingDrops {
+            let pendingView = makePendingView()
+            stackView.addArrangedSubview(pendingView)
+            pendingView.widthAnchor.constraint(equalTo: stackView.widthAnchor, constant: -16).isActive = true
+        }
     }
 
     private func makeItemView(for item: ShelfItem) -> BaseShelfItemView {
@@ -649,7 +719,7 @@ class ShelfViewController: NSViewController {
     }
 
     private func updateEmptyState() {
-        let empty = items.isEmpty
+        let empty = items.isEmpty && pendingDrops.isEmpty
         emptyImageView.isHidden = !empty
         emptyLabel.isHidden = !empty
         pasteHintLabel.isHidden = !empty

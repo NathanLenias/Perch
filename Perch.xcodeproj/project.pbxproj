@@ -16,6 +16,7 @@
 		A1000007 /* DragDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000008 /* DragDetector.swift */; };
 		A100000A /* DropTargetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000B /* DropTargetView.swift */; };
 		A100000B /* PreviewViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000C /* PreviewViewController.swift */; };
+		A100000C /* DropStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000D /* DropStore.swift */; };
 		A1000008 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B1000009 /* Assets.xcassets */; };
 		A1000009 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = B100000A /* Localizable.xcstrings */; };
 /* End PBXBuildFile section */
@@ -31,6 +32,7 @@
 		B1000008 /* DragDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragDetector.swift; sourceTree = "<group>"; };
 		B100000B /* DropTargetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DropTargetView.swift; sourceTree = "<group>"; };
 		B100000C /* PreviewViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewViewController.swift; sourceTree = "<group>"; };
+		B100000D /* DropStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DropStore.swift; sourceTree = "<group>"; };
 		B1000009 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Perch/Assets.xcassets"; sourceTree = "<group>"; };
 		B100000A /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		B1000010 /* Perch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Perch.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -57,6 +59,7 @@
 				B1000008 /* DragDetector.swift */,
 				B100000B /* DropTargetView.swift */,
 				B100000C /* PreviewViewController.swift */,
+				B100000D /* DropStore.swift */,
 				B1000009 /* Assets.xcassets */,
 				B100000A /* Localizable.xcstrings */,
 				B1000003 /* Info.plist */,
@@ -134,6 +137,7 @@
 				A1000007 /* DragDetector.swift in Sources */,
 				A100000A /* DropTargetView.swift in Sources */,
 				A100000B /* PreviewViewController.swift in Sources */,
+				A100000C /* DropStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

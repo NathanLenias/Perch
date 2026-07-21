@@ -13,6 +13,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private let dragDetector = DragDetector()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        DropStore.cleanOrphans()
         setupMenuBar()
         setupShelfCallbacks()
         dragDetector.delegate = self

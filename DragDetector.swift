@@ -1,4 +1,5 @@
 import AppKit
+import UniformTypeIdentifiers
 
 protocol DragDetectorDelegate: AnyObject {
     func dragDetectorDidDetectDragStart()
@@ -52,8 +53,8 @@ class DragDetector {
             guard currentCount != self.lastChangeCount else { return }
             self.lastChangeCount = currentCount
 
-            // Check if the drag contains file URLs
-            guard self.dragPasteboard.canReadObject(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) else { return }
+            // Check if the drag carries something we can shelve
+            guard Self.pasteboardHasShelvableContent(self.dragPasteboard) else { return }
 
             self.isActiveDrag = true
             self.hideTimer?.invalidate()
@@ -69,6 +70,25 @@ class DragDetector {
             self?.handleMouseUp()
             return event
         }
+    }
+
+    // MARK: - Shelvable content
+
+    /// True when a drag carries content the shelf can take: real files,
+    /// file promises (how browsers drag images), or raw image data.
+    /// Deliberately NOT text or bare links, to keep the shelf from popping
+    /// up on tab drags and text selections.
+    static func pasteboardHasShelvableContent(_ pasteboard: NSPasteboard) -> Bool {
+        if pasteboard.canReadObject(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) {
+            return true
+        }
+        if pasteboard.canReadObject(forClasses: [NSFilePromiseReceiver.self], options: nil) {
+            return true
+        }
+        if pasteboard.canReadItem(withDataConformingToTypes: [UTType.image.identifier]) {
+            return true
+        }
+        return false
     }
 
     // MARK: - Mouse Up Handling
