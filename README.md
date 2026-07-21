@@ -36,6 +36,14 @@ Perch is a free, open-source alternative to Yoink. When you start dragging a fil
 - Zero dependencies: pure Swift/AppKit
 - Menu bar app: no Dock icon, stays out of your way
 
+
+
+https://github.com/user-attachments/assets/b6280f23-f6e7-437f-b24f-6beb213cf911
+
+
+
+
+
 ## Install
 
 ### Download
