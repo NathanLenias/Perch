@@ -21,20 +21,20 @@ Perch is a free, open-source alternative to Yoink. When you start dragging a fil
 
 **Key features:**
 
-- Automatic shelf — appears when you drag files, hides when empty
-- File grouping — drop multiple files at once, they become a stack
-- Split stacks — ungroup with one click
-- Quick Look — preview files inside the shelf, or full-size in the system panel
-- Lock — pinned files stay in the shelf after dragging them out, for repeated reuse
+- Automatic shelf: appears when you drag files, hides when empty
+- File grouping: drop multiple files at once, they become a stack
+- Split stacks: ungroup with one click
+- Quick Look: preview files inside the shelf, or full-size in the system panel
+- Lock: pinned files stay in the shelf after dragging them out, for repeated reuse
   (and follow the file if it gets moved or renamed)
-- Copy & paste — paste files into the shelf with ⌘V, copy them out with ⌘C
+- Copy & paste: paste files into the shelf with ⌘V, copy them out with ⌘C
   or the Copy button, hold ⌥ while dropping to copy instead of move
 - List & two-column grid views, with file type and size at a glance
-- Instant thumbnails — even huge RAW photos never block the UI
+- Instant thumbnails: even huge RAW photos never block the UI
 - Launch at login
 - Localized (English, French)
-- Zero dependencies — pure Swift/AppKit
-- Menu bar app — no Dock icon, stays out of your way
+- Zero dependencies: pure Swift/AppKit
+- Menu bar app: no Dock icon, stays out of your way
 
 ## Install
 
@@ -56,7 +56,7 @@ The built app is at `~/Library/Developer/Xcode/DerivedData/Perch-*/Build/Product
 
 ### Permissions
 
-Perch does not need any permission for drag & drop detection. macOS may ask for access to protected folders (Desktop, Documents, Downloads) the first time Perch reads a file from them outside of a drag — for example when pasting with ⌘V or generating a preview. Grant it once in the prompt; it stays manageable in System Settings > Privacy & Security > Files and Folders.
+Perch does not need any permission for drag & drop detection. macOS may ask for access to protected folders (Desktop, Documents, Downloads) the first time Perch reads a file from them outside of a drag, for example when pasting with ⌘V or generating a preview. Grant it once in the prompt; it stays manageable in System Settings > Privacy & Security > Files and Folders.
 
 ## Usage
 
@@ -81,18 +81,18 @@ Perch does not need any permission for drag & drop detection. macOS may ask for 
 Contributions are welcome! The codebase is intentionally small and simple:
 
 ```
-AppDelegate.swift           — Menu bar, coordination
-DragDetector.swift          — System drag detection via NSEvent monitors
-ShelfWindowController.swift — Floating panel, show/hide animation
-ShelfViewController.swift   — Item management, selection, toolbar, Quick Look panel
-ShelfItem.swift             — Data model (single & grouped items, bookmarks, async thumbnails)
-ShelfItemView.swift         — List & grid views (shared base class)
-PreviewViewController.swift — In-shelf Quick Look preview screen
-DropTargetView.swift        — Drop target accepting file URLs
+AppDelegate.swift           - Menu bar, coordination
+DragDetector.swift          - System drag detection via NSEvent monitors
+ShelfWindowController.swift - Floating panel, show/hide animation
+ShelfViewController.swift   - Item management, selection, toolbar, Quick Look panel
+ShelfItem.swift             - Data model (single & grouped items, bookmarks, async thumbnails)
+ShelfItemView.swift         - List & grid views (shared base class)
+PreviewViewController.swift - In-shelf Quick Look preview screen
+DropTargetView.swift        - Drop target accepting file URLs
 ```
 
 No external dependencies. No package managers. Just open `Perch.xcodeproj` and build.
 
 ## License
 
-[MIT](LICENSE) — Nathan
+[MIT](LICENSE) · Nathan
