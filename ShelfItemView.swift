@@ -8,6 +8,12 @@ final class FirstMouseStackView: NSStackView {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
 
+/// Same for image views: the grid thumbnail covers most of the card, so a
+/// first click on it must start a drag, not just focus the panel.
+final class FirstMouseImageView: NSImageView {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+}
+
 // MARK: - Base class for shared drag, hover, and selection behavior
 
 class BaseShelfItemView: NSView, NSDraggingSource {
@@ -287,7 +293,7 @@ class BaseShelfItemView: NSView, NSDraggingSource {
 class ShelfItemView: BaseShelfItemView {
 
     private let backgroundLayer = CALayer()
-    private let iconView = NSImageView()
+    private let iconView = FirstMouseImageView()
     private let countBadge = NSTextField(labelWithString: "")
 
     override init(item: ShelfItem) {
@@ -458,7 +464,7 @@ class ShelfGridItemView: BaseShelfItemView {
     }
 
     private func setupViews() {
-        let imageView = NSImageView(image: item.thumbnail)
+        let imageView = FirstMouseImageView(image: item.thumbnail)
         if !item.isGroup {
             item.onThumbnailUpdated = { [weak imageView] image in imageView?.image = image }
         }
