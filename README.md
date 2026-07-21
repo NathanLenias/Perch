@@ -93,6 +93,12 @@ DropTargetView.swift        - Drop target accepting file URLs
 
 No external dependencies. No package managers. Just open `Perch.xcodeproj` and build.
 
+## Support
+
+Perch is free and open source. If it makes your day a little smoother, you can support its development:
+
+[![Support Perch on Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20Perch-E0A458?logo=ko-fi&logoColor=white)](https://ko-fi.com/perchformac)
+
 ## License
 
 [MIT](LICENSE) · Nathan
