@@ -630,8 +630,8 @@ class ShelfViewController: NSViewController {
                 itemView.widthAnchor.constraint(equalTo: stackView.widthAnchor, constant: -16).isActive = true
             }
         } else {
-            // Grid: rows of equal-width cards; the landscape (top) layout fits 3
-            let columns = (ShelfPosition.current == .top) ? 3 : 2
+            // Grid: rows of equal-width cards; the landscape (top) layout fits 4
+            let columns = (ShelfPosition.current == .top) ? 4 : 2
             for start in stride(from: 0, to: items.count, by: columns) {
                 let rowItems = Array(items[start..<min(start + columns, items.count)])
                 let row = FirstMouseStackView()

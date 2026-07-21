@@ -55,10 +55,10 @@ class ShelfWindowController: NSWindowController {
 
     // MARK: - Positioning
 
-    /// Portrait when docked on a side, landscape when docked at the top.
+    /// Portrait when docked on a side, wide 16:9-ish banner at the top.
     private var shelfSize: NSSize {
         ShelfPosition.current == .top
-            ? NSSize(width: 560, height: 420)
+            ? NSSize(width: 760, height: 430)
             : NSSize(width: 380, height: 540)
     }
 
