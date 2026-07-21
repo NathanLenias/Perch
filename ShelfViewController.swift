@@ -268,7 +268,6 @@ class ShelfViewController: NSViewController {
     var hasItems: Bool { !items.isEmpty }
     var onBecameEmpty: (() -> Void)?
     var onHideRequested: (() -> Void)?
-    var onPositionChanged: (() -> Void)?
 
     func removeItem(_ item: ShelfItem) {
         if previewController?.item === item { dismissPreview() }
@@ -560,21 +559,6 @@ class ShelfViewController: NSViewController {
         launchItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
         menu.addItem(launchItem)
 
-        let positionItem = NSMenuItem(
-            title: String(localized: "menu.position", defaultValue: "Position on Screen"),
-            action: nil, keyEquivalent: ""
-        )
-        let positionMenu = NSMenu()
-        for position in ShelfPosition.allCases {
-            let item = NSMenuItem(title: position.title, action: #selector(positionSelected(_:)), keyEquivalent: "")
-            item.target = self
-            item.representedObject = position.rawValue
-            item.state = (position == ShelfPosition.current) ? .on : .off
-            positionMenu.addItem(item)
-        }
-        menu.addItem(positionItem)
-        menu.setSubmenu(positionMenu, for: positionItem)
-
         menu.addItem(NSMenuItem.separator())
 
         let aboutItem = NSMenuItem(
@@ -595,15 +579,6 @@ class ShelfViewController: NSViewController {
         menu.popUp(positioning: nil, at: location, in: button)
     }
 
-
-    @objc private func positionSelected(_ sender: NSMenuItem) {
-        guard let raw = sender.representedObject as? String,
-              let position = ShelfPosition(rawValue: raw) else { return }
-        ShelfPosition.current = position
-        // The top position uses a landscape window with a wider grid
-        rebuildItemViews()
-        onPositionChanged?()
-    }
 
     @objc private func viewToggleChanged() {
         viewMode = (viewToggle.selectedSegment == 0) ? .list : .grid
@@ -630,17 +605,16 @@ class ShelfViewController: NSViewController {
                 itemView.widthAnchor.constraint(equalTo: stackView.widthAnchor, constant: -16).isActive = true
             }
         } else {
-            // Grid: rows of equal-width cards; the landscape (top) layout fits 4
-            let columns = (ShelfPosition.current == .top) ? 4 : 2
-            for start in stride(from: 0, to: items.count, by: columns) {
-                let rowItems = Array(items[start..<min(start + columns, items.count)])
+            // Grid: rows of two equal-width cards
+            for start in stride(from: 0, to: items.count, by: 2) {
+                let pair = Array(items[start..<min(start + 2, items.count)])
                 let row = FirstMouseStackView()
                 row.orientation = .horizontal
                 row.distribution = .fillEqually
                 row.spacing = 8
                 row.translatesAutoresizingMaskIntoConstraints = false
-                for item in rowItems { row.addArrangedSubview(makeItemView(for: item)) }
-                for _ in rowItems.count..<columns { row.addArrangedSubview(NSView()) }
+                for item in pair { row.addArrangedSubview(makeItemView(for: item)) }
+                if pair.count == 1 { row.addArrangedSubview(NSView()) }
                 stackView.addArrangedSubview(row)
                 row.widthAnchor.constraint(equalTo: stackView.widthAnchor, constant: -16).isActive = true
             }

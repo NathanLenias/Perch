@@ -1,30 +1,5 @@
 import AppKit
 
-/// Where the shelf docks on screen. Persisted across launches.
-enum ShelfPosition: String, CaseIterable {
-    case left, top, right
-
-    private static let defaultsKey = "shelfPosition"
-
-    static var current: ShelfPosition {
-        get {
-            UserDefaults.standard.string(forKey: defaultsKey)
-                .flatMap(ShelfPosition.init) ?? .left
-        }
-        set {
-            UserDefaults.standard.set(newValue.rawValue, forKey: defaultsKey)
-        }
-    }
-
-    var title: String {
-        switch self {
-        case .left: String(localized: "position.left", defaultValue: "Left")
-        case .top: String(localized: "position.top", defaultValue: "Top")
-        case .right: String(localized: "position.right", defaultValue: "Right")
-        }
-    }
-}
-
 class ShelfWindowController: NSWindowController {
 
     init() {
@@ -55,12 +30,8 @@ class ShelfWindowController: NSWindowController {
 
     // MARK: - Positioning
 
-    /// Portrait when docked on a side, wide 16:9-ish banner at the top.
-    private var shelfSize: NSSize {
-        ShelfPosition.current == .top
-            ? NSSize(width: 760, height: 430)
-            : NSSize(width: 380, height: 540)
-    }
+    private let shelfWidth: CGFloat = 380
+    private let shelfHeight: CGFloat = 540
 
     private var currentScreen: NSScreen {
         let mouseLocation = NSEvent.mouseLocation
@@ -69,22 +40,10 @@ class ShelfWindowController: NSWindowController {
 
     private func shelfFrame(for screen: NSScreen, offScreen: Bool) -> NSRect {
         let visibleFrame = screen.visibleFrame
-        let size = shelfSize
-        let centeredY = visibleFrame.origin.y + (visibleFrame.height - size.height) / 2
+        let y = visibleFrame.origin.y + (visibleFrame.height - shelfHeight) / 2
+        let x = offScreen ? visibleFrame.origin.x - shelfWidth : visibleFrame.origin.x + 12
 
-        switch ShelfPosition.current {
-        case .left:
-            let x = offScreen ? visibleFrame.minX - size.width : visibleFrame.minX + 12
-            return NSRect(x: x, y: centeredY, width: size.width, height: size.height)
-        case .right:
-            let x = offScreen ? visibleFrame.maxX : visibleFrame.maxX - size.width - 12
-            return NSRect(x: x, y: centeredY, width: size.width, height: size.height)
-        case .top:
-            // Centered under the menu bar / notch; slides in from above it
-            let x = visibleFrame.midX - size.width / 2
-            let y = offScreen ? screen.frame.maxY : visibleFrame.maxY - size.height - 12
-            return NSRect(x: x, y: y, width: size.width, height: size.height)
-        }
+        return NSRect(x: x, y: y, width: shelfWidth, height: shelfHeight)
     }
 
     // MARK: - Show / Hide with animation
@@ -137,17 +96,6 @@ class ShelfWindowController: NSWindowController {
 
     func toggleShelf() {
         if isShelfVisible { hideShelf() } else { showShelf() }
-    }
-
-    /// Slides the visible shelf to the currently selected position.
-    func repositionShelf() {
-        guard isShelfVisible, let window = window else { return }
-        let screen = currentScreen
-        NSAnimationContext.runAnimationGroup { ctx in
-            ctx.duration = 0.25
-            ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            window.animator().setFrame(shelfFrame(for: screen, offScreen: false), display: true)
-        }
     }
 
 }

@@ -31,9 +31,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 self.shelfWindowController.hideShelf()
                 self.updateMenuItemTitle()
             }
-            vc.onPositionChanged = { [weak self] in
-                self?.shelfWindowController.repositionShelf()
-            }
         }
     }
 
