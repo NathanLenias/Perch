@@ -19,6 +19,8 @@
 
 Perch is a free, open-source alternative to Yoink. When you start dragging a file, a floating shelf slides in from the left edge of your screen. Drop files there, switch windows, then drag them out to their destination.
 
+https://github.com/user-attachments/assets/b6280f23-f6e7-437f-b24f-6beb213cf911
+
 **Key features:**
 
 - Automatic shelf: appears when you drag files, hides when empty
@@ -35,14 +37,6 @@ Perch is a free, open-source alternative to Yoink. When you start dragging a fil
 - Localized (English, French)
 - Zero dependencies: pure Swift/AppKit
 - Menu bar app: no Dock icon, stays out of your way
-
-
-
-https://github.com/user-attachments/assets/b6280f23-f6e7-437f-b24f-6beb213cf911
-
-
-
-
 
 ## Install
 
