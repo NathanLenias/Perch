@@ -15,13 +15,36 @@ class ShelfWindowController: NSWindowController {
         window.isOpaque = false
         window.backgroundColor = .clear
         window.hasShadow = true
-        // .fullScreenAuxiliary is required so the shelf can appear over full-screen apps
-        window.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
+        window.collectionBehavior = Self.shelfCollectionBehavior
         window.isMovableByWindowBackground = false
         window.hidesOnDeactivate = false
 
         let viewController = ShelfViewController()
         window.contentViewController = viewController
+
+        // The window server sometimes drops the all-spaces tag (historically:
+        // the shelf would end up captive of a single desktop). Watch space
+        // changes so we can re-assert it whenever that happens.
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(activeSpaceDidChange),
+            name: NSWorkspace.activeSpaceDidChangeNotification,
+            object: nil
+        )
+    }
+
+    /// One window shown on every desktop: .canJoinAllSpaces spans all spaces,
+    /// .fullScreenAuxiliary lets it appear over full-screen apps.
+    private static let shelfCollectionBehavior: NSWindow.CollectionBehavior =
+        [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
+
+    /// If the shelf should be visible but isn't on the space the user just
+    /// switched to, the all-spaces tag was lost — re-assert it.
+    @objc private func activeSpaceDidChange() {
+        guard isShelfVisible, let window = window, !window.isOnActiveSpace else { return }
+        NSLog("Perch: shelf missing from active space, re-asserting all-spaces behavior")
+        window.collectionBehavior = Self.shelfCollectionBehavior
+        window.orderFront(nil)
     }
 
     required init?(coder: NSCoder) {
@@ -61,6 +84,9 @@ class ShelfWindowController: NSWindowController {
         isShelfVisible = true
         animationGeneration += 1
 
+        // Re-assert on every show: the tag can get dropped by the window
+        // server (e.g. when ordering front during a space transition)
+        window.collectionBehavior = Self.shelfCollectionBehavior
         window.setFrame(shelfFrame(for: screen, offScreen: true), display: false)
         window.alphaValue = 0
         window.orderFront(nil)
