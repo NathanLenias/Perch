@@ -55,8 +55,12 @@ class ShelfWindowController: NSWindowController {
 
     // MARK: - Positioning
 
-    private let shelfWidth: CGFloat = 380
-    private let shelfHeight: CGFloat = 540
+    /// Portrait when docked on a side, landscape when docked at the top.
+    private var shelfSize: NSSize {
+        ShelfPosition.current == .top
+            ? NSSize(width: 560, height: 420)
+            : NSSize(width: 380, height: 540)
+    }
 
     private var currentScreen: NSScreen {
         let mouseLocation = NSEvent.mouseLocation
@@ -65,20 +69,21 @@ class ShelfWindowController: NSWindowController {
 
     private func shelfFrame(for screen: NSScreen, offScreen: Bool) -> NSRect {
         let visibleFrame = screen.visibleFrame
-        let centeredY = visibleFrame.origin.y + (visibleFrame.height - shelfHeight) / 2
+        let size = shelfSize
+        let centeredY = visibleFrame.origin.y + (visibleFrame.height - size.height) / 2
 
         switch ShelfPosition.current {
         case .left:
-            let x = offScreen ? visibleFrame.minX - shelfWidth : visibleFrame.minX + 12
-            return NSRect(x: x, y: centeredY, width: shelfWidth, height: shelfHeight)
+            let x = offScreen ? visibleFrame.minX - size.width : visibleFrame.minX + 12
+            return NSRect(x: x, y: centeredY, width: size.width, height: size.height)
         case .right:
-            let x = offScreen ? visibleFrame.maxX : visibleFrame.maxX - shelfWidth - 12
-            return NSRect(x: x, y: centeredY, width: shelfWidth, height: shelfHeight)
+            let x = offScreen ? visibleFrame.maxX : visibleFrame.maxX - size.width - 12
+            return NSRect(x: x, y: centeredY, width: size.width, height: size.height)
         case .top:
             // Centered under the menu bar / notch; slides in from above it
-            let x = visibleFrame.midX - shelfWidth / 2
-            let y = offScreen ? screen.frame.maxY : visibleFrame.maxY - shelfHeight - 12
-            return NSRect(x: x, y: y, width: shelfWidth, height: shelfHeight)
+            let x = visibleFrame.midX - size.width / 2
+            let y = offScreen ? screen.frame.maxY : visibleFrame.maxY - size.height - 12
+            return NSRect(x: x, y: y, width: size.width, height: size.height)
         }
     }
 

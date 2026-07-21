@@ -600,6 +600,8 @@ class ShelfViewController: NSViewController {
         guard let raw = sender.representedObject as? String,
               let position = ShelfPosition(rawValue: raw) else { return }
         ShelfPosition.current = position
+        // The top position uses a landscape window with a wider grid
+        rebuildItemViews()
         onPositionChanged?()
     }
 
@@ -628,16 +630,17 @@ class ShelfViewController: NSViewController {
                 itemView.widthAnchor.constraint(equalTo: stackView.widthAnchor, constant: -16).isActive = true
             }
         } else {
-            // Grid: rows of two equal-width cards
-            for start in stride(from: 0, to: items.count, by: 2) {
-                let pair = Array(items[start..<min(start + 2, items.count)])
+            // Grid: rows of equal-width cards; the landscape (top) layout fits 3
+            let columns = (ShelfPosition.current == .top) ? 3 : 2
+            for start in stride(from: 0, to: items.count, by: columns) {
+                let rowItems = Array(items[start..<min(start + columns, items.count)])
                 let row = FirstMouseStackView()
                 row.orientation = .horizontal
                 row.distribution = .fillEqually
                 row.spacing = 8
                 row.translatesAutoresizingMaskIntoConstraints = false
-                for item in pair { row.addArrangedSubview(makeItemView(for: item)) }
-                if pair.count == 1 { row.addArrangedSubview(NSView()) }
+                for item in rowItems { row.addArrangedSubview(makeItemView(for: item)) }
+                for _ in rowItems.count..<columns { row.addArrangedSubview(NSView()) }
                 stackView.addArrangedSubview(row)
                 row.widthAnchor.constraint(equalTo: stackView.widthAnchor, constant: -16).isActive = true
             }
