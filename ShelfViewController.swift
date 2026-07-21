@@ -268,6 +268,7 @@ class ShelfViewController: NSViewController {
     var hasItems: Bool { !items.isEmpty }
     var onBecameEmpty: (() -> Void)?
     var onHideRequested: (() -> Void)?
+    var onPositionChanged: (() -> Void)?
 
     func removeItem(_ item: ShelfItem) {
         if previewController?.item === item { dismissPreview() }
@@ -559,6 +560,21 @@ class ShelfViewController: NSViewController {
         launchItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
         menu.addItem(launchItem)
 
+        let positionItem = NSMenuItem(
+            title: String(localized: "menu.position", defaultValue: "Position on Screen"),
+            action: nil, keyEquivalent: ""
+        )
+        let positionMenu = NSMenu()
+        for position in ShelfPosition.allCases {
+            let item = NSMenuItem(title: position.title, action: #selector(positionSelected(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = position.rawValue
+            item.state = (position == ShelfPosition.current) ? .on : .off
+            positionMenu.addItem(item)
+        }
+        menu.addItem(positionItem)
+        menu.setSubmenu(positionMenu, for: positionItem)
+
         menu.addItem(NSMenuItem.separator())
 
         let aboutItem = NSMenuItem(
@@ -579,6 +595,13 @@ class ShelfViewController: NSViewController {
         menu.popUp(positioning: nil, at: location, in: button)
     }
 
+
+    @objc private func positionSelected(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String,
+              let position = ShelfPosition(rawValue: raw) else { return }
+        ShelfPosition.current = position
+        onPositionChanged?()
+    }
 
     @objc private func viewToggleChanged() {
         viewMode = (viewToggle.selectedSegment == 0) ? .list : .grid
