@@ -1,6 +1,33 @@
 import AppKit
 import UniformTypeIdentifiers
 
+/// Which kinds of dragged content make the shelf appear. User-configurable
+/// from the gear menu, persisted across launches.
+enum ShelfTriggers {
+    private static let filesKey = "showForFiles"
+    private static let linksKey = "showForLinks"
+    private static let textKey = "showForText"
+
+    /// Files and images (Finder files, web images). On by default.
+    static var files: Bool {
+        get { UserDefaults.standard.object(forKey: filesKey) as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: filesKey) }
+    }
+
+    /// Web links. On by default.
+    static var links: Bool {
+        get { UserDefaults.standard.object(forKey: linksKey) as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: linksKey) }
+    }
+
+    /// Text selections. Off by default: moving text inside a document is
+    /// too common a gesture to hijack.
+    static var text: Bool {
+        get { UserDefaults.standard.object(forKey: textKey) as? Bool ?? false }
+        set { UserDefaults.standard.set(newValue, forKey: textKey) }
+    }
+}
+
 protocol DragDetectorDelegate: AnyObject {
     func dragDetectorDidDetectDragStart()
     func dragDetectorDidDetectDragEnd()
@@ -74,23 +101,28 @@ class DragDetector {
 
     // MARK: - Shelvable content
 
-    /// True when a drag carries content that makes the shelf appear: real
-    /// files, file promises (how browsers drag images), raw image data, or
-    /// web links. Deliberately NOT plain text: moving a text selection
-    /// around a document is too common a gesture to hijack (text is still
-    /// accepted by the drop target when the shelf is already visible).
+    /// True when a drag carries content that makes the shelf appear,
+    /// according to the user's trigger preferences (gear menu). Whatever is
+    /// disabled here is still accepted by the drop target when the shelf is
+    /// already visible.
     static func pasteboardHasShelvableContent(_ pasteboard: NSPasteboard) -> Bool {
-        if pasteboard.canReadObject(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) {
-            return true
+        if ShelfTriggers.files {
+            if pasteboard.canReadObject(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) {
+                return true
+            }
+            if pasteboard.canReadObject(forClasses: [NSFilePromiseReceiver.self], options: nil) {
+                return true
+            }
+            if pasteboard.canReadItem(withDataConformingToTypes: [UTType.image.identifier]) {
+                return true
+            }
         }
-        if pasteboard.canReadObject(forClasses: [NSFilePromiseReceiver.self], options: nil) {
-            return true
-        }
-        if pasteboard.canReadItem(withDataConformingToTypes: [UTType.image.identifier]) {
-            return true
-        }
-        if let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL],
+        if ShelfTriggers.links,
+           let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL],
            urls.contains(where: { $0.scheme == "http" || $0.scheme == "https" }) {
+            return true
+        }
+        if ShelfTriggers.text, pasteboard.string(forType: .string) != nil {
             return true
         }
         return false

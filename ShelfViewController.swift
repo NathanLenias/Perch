@@ -620,6 +620,26 @@ class ShelfViewController: NSViewController {
         launchItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
         menu.addItem(launchItem)
 
+        let showForItem = NSMenuItem(
+            title: String(localized: "menu.showFor", defaultValue: "Show Shelf For"),
+            action: nil, keyEquivalent: ""
+        )
+        let showForMenu = NSMenu()
+        let triggers: [(String, String, Bool)] = [
+            ("files", String(localized: "trigger.files", defaultValue: "Files (images, PDFs…)"), ShelfTriggers.files),
+            ("links", String(localized: "trigger.links", defaultValue: "Links"), ShelfTriggers.links),
+            ("text", String(localized: "trigger.text", defaultValue: "Text"), ShelfTriggers.text),
+        ]
+        for (key, title, enabled) in triggers {
+            let item = NSMenuItem(title: title, action: #selector(triggerToggled(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = key
+            item.state = enabled ? .on : .off
+            showForMenu.addItem(item)
+        }
+        menu.addItem(showForItem)
+        menu.setSubmenu(showForMenu, for: showForItem)
+
         menu.addItem(NSMenuItem.separator())
 
         let aboutItem = NSMenuItem(
@@ -640,6 +660,15 @@ class ShelfViewController: NSViewController {
         menu.popUp(positioning: nil, at: location, in: button)
     }
 
+
+    @objc private func triggerToggled(_ sender: NSMenuItem) {
+        switch sender.representedObject as? String {
+        case "files": ShelfTriggers.files.toggle()
+        case "links": ShelfTriggers.links.toggle()
+        case "text": ShelfTriggers.text.toggle()
+        default: return
+        }
+    }
 
     @objc private func viewToggleChanged() {
         viewMode = (viewToggle.selectedSegment == 0) ? .list : .grid
