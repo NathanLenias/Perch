@@ -14,7 +14,7 @@ class DropTargetView: NSVisualEffectView {
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
-        var types: [NSPasteboard.PasteboardType] = [.fileURL, .URL, .tiff, .png]
+        var types: [NSPasteboard.PasteboardType] = [.fileURL, .URL, .tiff, .png, .string]
         types += NSFilePromiseReceiver.readableDraggedTypes.map { NSPasteboard.PasteboardType($0) }
         registerForDraggedTypes(types)
     }
@@ -24,7 +24,7 @@ class DropTargetView: NSVisualEffectView {
     }
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
-        guard DragDetector.pasteboardHasShelvableContent(sender.draggingPasteboard) else {
+        guard isDroppable(sender.draggingPasteboard) else {
             return []
         }
         layer?.borderWidth = 2
@@ -33,7 +33,14 @@ class DropTargetView: NSVisualEffectView {
     }
 
     override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
-        DragDetector.pasteboardHasShelvableContent(sender.draggingPasteboard) ? .copy : []
+        isDroppable(sender.draggingPasteboard) ? .copy : []
+    }
+
+    /// The drop target takes more than what makes the shelf appear: plain
+    /// text doesn't summon the shelf, but is welcome once it's visible.
+    private func isDroppable(_ pasteboard: NSPasteboard) -> Bool {
+        DragDetector.pasteboardHasShelvableContent(pasteboard)
+            || pasteboard.string(forType: .string) != nil
     }
 
     override func draggingExited(_ sender: NSDraggingInfo?) {
@@ -60,17 +67,33 @@ class DropTargetView: NSVisualEffectView {
             return true
         }
 
-        // 3. No promise but a remote URL alongside image data: download it
+        // 3. Remote URL alongside image data: a dragged web image, download it
         if let remote = remoteURL(from: pasteboard) {
-            guard let pendingID = onPendingBegin?() else { return false }
-            DropStore.download(from: remote) { [weak self] localURL in
-                self?.onPendingResolved?(pendingID, localURL)
+            if hasImageData(pasteboard) {
+                guard let pendingID = onPendingBegin?() else { return false }
+                DropStore.download(from: remote) { [weak self] localURL in
+                    self?.onPendingResolved?(pendingID, localURL)
+                }
+                return true
             }
+            // 4. Remote URL without image data: a link, keep it as .webloc
+            let title = pasteboard.string(forType: NSPasteboard.PasteboardType("public.url-name"))
+            if let url = DropStore.writeLink(remote, title: title) {
+                onDrop?([url])
+                return true
+            }
+            return false
+        }
+
+        // 5. Raw image data only: write it out as a file
+        if let (data, type) = imageData(from: pasteboard), let url = DropStore.write(data: data, type: type) {
+            onDrop?([url])
             return true
         }
 
-        // 4. Raw image data only: write it out as a file
-        if let (data, type) = imageData(from: pasteboard), let url = DropStore.write(data: data, type: type) {
+        // 6. Plain text: keep it as a .txt file
+        if let text = pasteboard.string(forType: .string), !text.isEmpty,
+           let url = DropStore.writeText(text) {
             onDrop?([url])
             return true
         }
@@ -95,6 +118,10 @@ class DropTargetView: NSVisualEffectView {
             return nil
         }
         return urls.first { $0.scheme == "http" || $0.scheme == "https" }
+    }
+
+    private func hasImageData(_ pasteboard: NSPasteboard) -> Bool {
+        pasteboard.canReadItem(withDataConformingToTypes: [UTType.image.identifier])
     }
 
     private func imageData(from pasteboard: NSPasteboard) -> (Data, UTType)? {

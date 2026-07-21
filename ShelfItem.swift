@@ -155,6 +155,7 @@ class ShelfItem {
 
     private static func typeLabel(for url: URL, isDirectory: Bool) -> String? {
         let ext = url.pathExtension
+        if ext.lowercased() == "webloc" { return String(localized: "item.link", defaultValue: "Link") }
         if !ext.isEmpty { return ext.uppercased() }
         if isDirectory { return String(localized: "item.folder", defaultValue: "Folder") }
         return UTType(filenameExtension: ext)?.localizedDescription

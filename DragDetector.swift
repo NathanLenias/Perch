@@ -74,10 +74,11 @@ class DragDetector {
 
     // MARK: - Shelvable content
 
-    /// True when a drag carries content the shelf can take: real files,
-    /// file promises (how browsers drag images), or raw image data.
-    /// Deliberately NOT text or bare links, to keep the shelf from popping
-    /// up on tab drags and text selections.
+    /// True when a drag carries content that makes the shelf appear: real
+    /// files, file promises (how browsers drag images), raw image data, or
+    /// web links. Deliberately NOT plain text: moving a text selection
+    /// around a document is too common a gesture to hijack (text is still
+    /// accepted by the drop target when the shelf is already visible).
     static func pasteboardHasShelvableContent(_ pasteboard: NSPasteboard) -> Bool {
         if pasteboard.canReadObject(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) {
             return true
@@ -86,6 +87,10 @@ class DragDetector {
             return true
         }
         if pasteboard.canReadItem(withDataConformingToTypes: [UTType.image.identifier]) {
+            return true
+        }
+        if let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL],
+           urls.contains(where: { $0.scheme == "http" || $0.scheme == "https" }) {
             return true
         }
         return false

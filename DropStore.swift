@@ -61,6 +61,44 @@ enum DropStore {
         }
     }
 
+    /// Writes a dropped link as a .webloc file (macOS's native link format:
+    /// double-clickable, opens the browser).
+    static func writeLink(_ remote: URL, title: String?) -> URL? {
+        let baseName = sanitizeFilename(title ?? remote.host() ?? "Link")
+        let destination = makeDropFolder().appendingPathComponent("\(baseName).webloc")
+        let plist = ["URL": remote.absoluteString]
+        guard let data = try? PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0) else {
+            return nil
+        }
+        do {
+            try data.write(to: destination)
+            return destination
+        } catch {
+            return nil
+        }
+    }
+
+    /// Writes dropped text as a UTF-8 .txt file named after its first words.
+    static func writeText(_ text: String) -> URL? {
+        let firstLine = text.split(separator: "\n", maxSplits: 1).first ?? ""
+        let baseName = sanitizeFilename(String(firstLine.prefix(30)))
+        let destination = makeDropFolder().appendingPathComponent("\(baseName).txt")
+        do {
+            try text.write(to: destination, atomically: true, encoding: .utf8)
+            return destination
+        } catch {
+            return nil
+        }
+    }
+
+    private static func sanitizeFilename(_ name: String) -> String {
+        let cleaned = name
+            .replacingOccurrences(of: "/", with: "-")
+            .replacingOccurrences(of: ":", with: "-")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return cleaned.isEmpty ? String(localized: "drop.untitled", defaultValue: "Untitled") : cleaned
+    }
+
     /// Items don't persist across launches, so anything left in the store at
     /// startup belongs to no one. Sweep it all.
     static func cleanOrphans() {
