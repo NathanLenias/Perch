@@ -1,12 +1,10 @@
 <p align="center">
-  <img src="Perch/Assets.xcassets/AppIcon.appiconset/icon_512.png" width="128" height="128" alt="Perch icon">
+  <img src="banner_perch.png" alt="A perch for your files. Drop it now, grab it later. A drag & drop shelf for macOS.">
 </p>
-
-<h1 align="center">Perch</h1>
 
 <p align="center">
   A lightweight macOS shelf that appears during drag & drop.<br>
-  Drop files in two steps instead of one — inspired by <a href="https://eternalstorms.at/yoink/mac/">Yoink</a>.
+  Drop files in two steps instead of one, inspired by <a href="https://eternalstorms.at/yoink/mac/">Yoink</a>.
 </p>
 
 <p align="center">
