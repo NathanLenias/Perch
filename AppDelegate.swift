@@ -1,5 +1,6 @@
 import AppKit
 import ServiceManagement
+import Carbon.HIToolbox
 
 extension NSColor {
     /// Perch's amber accent, adaptive light/dark (defined in Assets.xcassets).
@@ -11,6 +12,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private lazy var shelfWindowController = ShelfWindowController()
     private let dragDetector = DragDetector()
+    private var showShelfHotKey: HotKey?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         DropStore.cleanOrphans()
@@ -18,6 +20,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         setupShelfCallbacks()
         dragDetector.delegate = self
         dragDetector.start()
+
+        // ⌥⌘P shows/hides the shelf from anywhere
+        showShelfHotKey = HotKey(
+            keyCode: UInt32(kVK_ANSI_P),
+            modifiers: UInt32(cmdKey | optionKey)
+        ) { [weak self] in
+            self?.toggleShelf()
+        }
     }
 
     private func setupShelfCallbacks() {
@@ -46,10 +56,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         let menu = NSMenu()
 
-        menu.addItem(NSMenuItem(
+        let showItem = NSMenuItem(
             title: String(localized: "menu.showPerch", defaultValue: "Show Perch"),
-            action: #selector(toggleShelf), keyEquivalent: "s"
-        ))
+            action: #selector(toggleShelf), keyEquivalent: "p"
+        )
+        showItem.keyEquivalentModifierMask = [.command, .option]
+        menu.addItem(showItem)
         menu.addItem(NSMenuItem(
             title: String(localized: "menu.clearPerch", defaultValue: "Clear Perch"),
             action: #selector(clearShelf), keyEquivalent: ""

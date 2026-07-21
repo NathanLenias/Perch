@@ -73,6 +73,7 @@ Perch does not need any permission for drag & drop detection. macOS may ask for 
 - **Lock (padlock)** → the file stays in the shelf after drag-outs, ready to reuse
 - **⌥ + drop** → copy instead of move, item stays in the shelf
 - **⌘V on the shelf** → paste files from the clipboard, **⌘C** → copy the selection
+- **⌥⌘P** → show or hide the shelf from anywhere
 - **Cmd+click / Shift+click** → multi-select
 - **Gear icon** → launch at login, about, quit
 
