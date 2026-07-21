@@ -356,8 +356,9 @@ class ShelfViewController: NSViewController {
                 item.refreshMovedFiles()
                 return !item.fileExists
             }
-            // A copy-style drop (Mail, ⌥…) leaves a Perch-owned file behind
-            item.urls.forEach { DropStore.deleteIfOwned($0) }
+            // Never delete owned files here: the destination (Finder, Mail…)
+            // may still be reading them asynchronously after the drag ends.
+            // Files left behind by copy-style drops are swept at next launch.
             return true
         }
         selectedURLs.removeAll()
