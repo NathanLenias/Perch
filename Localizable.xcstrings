@@ -280,23 +280,6 @@
         }
       }
     },
-    "a11y.copy" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copy"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copier"
-          }
-        }
-      }
-    },
     "drop.pasteHint" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -484,40 +467,6 @@
         }
       }
     },
-    "a11y.settings" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Settings"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "R\u00e9glages"
-          }
-        }
-      }
-    },
-    "a11y.clearAll" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Clear Perch"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vider Perch"
-          }
-        }
-      }
-    },
     "a11y.toggleView" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -565,23 +514,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Diviser"
-          }
-        }
-      }
-    },
-    "a11y.perch" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Perch"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Perch"
           }
         }
       }
