@@ -13,8 +13,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var shelfWindowController = ShelfWindowController()
     private let dragDetector = DragDetector()
     private var showShelfHotKey: HotKey?
+    private var appNapActivity: NSObjectProtocol?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // A menu bar app with no visible window is a prime App Nap target;
+        // napping throttles the event monitors, timers and animations the
+        // shelf depends on. Opt out (doesn't prevent system sleep).
+        appNapActivity = ProcessInfo.processInfo.beginActivity(
+            options: .userInitiatedAllowingIdleSystemSleep,
+            reason: "Monitoring drags for the shelf"
+        )
+
         DropStore.cleanOrphans()
         setupMenuBar()
         setupShelfCallbacks()

@@ -45,7 +45,17 @@ class ShelfWindowController: NSWindowController {
     /// Idempotent and cheap.
     @objc private func activeSpaceDidChange() {
         guard isShelfVisible, let window = window else { return }
+        reassertVisible(window)
+    }
+
+    /// Fully restores the "visible shelf" state: behavior tag, on-screen
+    /// frame, opacity, ordering. Repair paths must restore everything —
+    /// re-ordering a window stuck at alpha 0 or off screen shows nothing.
+    private func reassertVisible(_ window: NSWindow) {
+        animationGeneration += 1
         window.collectionBehavior = Self.shelfCollectionBehavior
+        window.setFrame(shelfFrame(for: currentScreen, offScreen: false), display: true)
+        window.alphaValue = 1
         window.orderFront(nil)
     }
 
@@ -82,11 +92,7 @@ class ShelfWindowController: NSWindowController {
     func showShelf() {
         guard let window = window else { return }
         if isShelfVisible {
-            // Already supposed to be visible. Re-assert instead of no-op:
-            // heals a window the window server captured on another space
-            // (the next drag fixes it), harmless when everything is fine.
-            window.collectionBehavior = Self.shelfCollectionBehavior
-            window.orderFront(nil)
+            reassertVisible(window)
             return
         }
         let screen = currentScreen
