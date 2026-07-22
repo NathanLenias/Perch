@@ -38,11 +38,13 @@ class ShelfWindowController: NSWindowController {
     private static let shelfCollectionBehavior: NSWindow.CollectionBehavior =
         [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
 
-    /// If the shelf should be visible but isn't on the space the user just
-    /// switched to, the all-spaces tag was lost — re-assert it.
+    /// Re-assert the all-spaces behavior on every space change, without
+    /// conditions: `isOnActiveSpace` computes its answer from the collection
+    /// behavior we set, so it keeps saying yes even when the window server
+    /// has captured the window on a single space. Don't ask — re-assert.
+    /// Idempotent and cheap.
     @objc private func activeSpaceDidChange() {
-        guard isShelfVisible, let window = window, !window.isOnActiveSpace else { return }
-        NSLog("Perch: shelf missing from active space, re-asserting all-spaces behavior")
+        guard isShelfVisible, let window = window else { return }
         window.collectionBehavior = Self.shelfCollectionBehavior
         window.orderFront(nil)
     }
@@ -78,8 +80,15 @@ class ShelfWindowController: NSWindowController {
     private var animationGeneration = 0
 
     func showShelf() {
-        guard !isShelfVisible else { return }
         guard let window = window else { return }
+        if isShelfVisible {
+            // Already supposed to be visible. Re-assert instead of no-op:
+            // heals a window the window server captured on another space
+            // (the next drag fixes it), harmless when everything is fine.
+            window.collectionBehavior = Self.shelfCollectionBehavior
+            window.orderFront(nil)
+            return
+        }
         let screen = currentScreen
         isShelfVisible = true
         animationGeneration += 1
